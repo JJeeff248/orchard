@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate"}
 
 
 @dataclass(slots=True)
@@ -92,6 +92,8 @@ class AppleModelBuilder:
             accessory = self._build_binary_sensor(state)
         elif domain == "cover":
             accessory = self._build_cover(state)
+        elif domain == "climate":
+            accessory = self._build_climate(state)
         else:
             accessory = None
 
@@ -299,6 +301,28 @@ class AppleModelBuilder:
                 "reason": "Covers can be opened/closed and stopped.",
                 "supports": controls,
                 "recommendation": "Apple Cover",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_climate(self, state: State) -> AppleAccessory:
+        controls = ["Temperature", "Mode"]
+        capabilities = {"temperature": True, "modes": True}
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Thermostat",
+            icon="mdi:thermostat",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Thermostat",
+                "reason": "Climate entities provide temperature control and modes.",
+                "supports": controls,
+                "recommendation": "Apple Thermostat",
             },
             diagnostics=self._diagnostics(state),
         )
