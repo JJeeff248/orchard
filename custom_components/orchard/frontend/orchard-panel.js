@@ -35,11 +35,28 @@ class OrchardPanel extends HTMLElement {
 
   accessory() {
     if (!this.state) return null;
-    return this.state.accessories.find((item) => item.source_entity_id === this.selectedId)
+    return (
+      this.state.accessories.find((item) => item.source_entity_id === this.selectedId)
       || this.state.changes.map((item) => item.accessory).find((item) => item.source_entity_id === this.selectedId)
-      || (this.state.ignored || []).map((item) => ({ source_entity_id: item.entity_id, name: item.entity_id, icon: "mdi:home" })).find((item) => item.source_entity_id === this.selectedId)
+      || (this.state.ignored || [])
+        .map((item) => ({
+          source_entity_id: item.entity_id,
+          name: item.name || item.entity_id,
+          icon: "mdi:home",
+          category: "Unknown",
+          room: item.room || null,
+          controls: [],
+          capabilities: {},
+          exposure: "individual",
+          siri_name: item.name || item.entity_id,
+          visible: true,
+          state: null,
+          explanation: { mapped_as: "Ignored" },
+        }))
+        .find((item) => item.source_entity_id === this.selectedId)
       || this.state.accessories[0]
-      || null;
+      || null
+    );
   }
 
   render() {
