@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock"}
 
 
 @dataclass(slots=True)
@@ -94,6 +94,8 @@ class AppleModelBuilder:
             accessory = self._build_cover(state)
         elif domain == "climate":
             accessory = self._build_climate(state)
+        elif domain == "lock":
+            accessory = self._build_lock(state)
         else:
             accessory = None
 
@@ -323,6 +325,28 @@ class AppleModelBuilder:
                 "reason": "Climate entities provide temperature control and modes.",
                 "supports": controls,
                 "recommendation": "Apple Thermostat",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_lock(self, state: State) -> AppleAccessory:
+        controls = ["Lock", "Unlock"]
+        capabilities = {"lock": True}
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Lock",
+            icon="mdi:lock",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Lock",
+                "reason": "Locks expose lock/unlock controls.",
+                "supports": controls,
+                "recommendation": "Apple Lock",
             },
             diagnostics=self._diagnostics(state),
         )
