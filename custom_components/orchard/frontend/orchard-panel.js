@@ -396,7 +396,7 @@ class OrchardPanel extends HTMLElement {
       button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/ignored/${button.dataset.unignore}/unignore`); });
     });
     this.shadowRoot.querySelectorAll("[data-remove]").forEach((button) => {
-      button.addEventListener("click", (e) => { e.stopPropagation(); if (confirm("Permanently remove this accessory from Orchard?")) { this.post(`orchard/accessory/${button.dataset.remove}/delete`); } });
+      button.addEventListener("click", (e) => { e.stopPropagation(); if (confirm("Ignore this accessory and remove it from Orchard-managed HomeKit (can be unignored)?")) { this.post(`orchard/change/${button.dataset.remove}/ignore`); } });
     });
     const reconcile = this.shadowRoot.querySelector("[data-reconcile]");
     if (reconcile) reconcile.addEventListener("click", () => this.post("orchard/reconcile"));

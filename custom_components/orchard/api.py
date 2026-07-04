@@ -170,5 +170,6 @@ class RemoveAccessoryView(HomeAssistantView):
 
     async def post(self, request, entity_id: str):
         runtime = runtime_for(request.app[KEY_HASS])
-        await runtime.async_remove_accessory(entity_id)
+        # Do not permanently delete via API; move to ignored list instead
+        await runtime.async_ignore(entity_id)
         return self.json(runtime.dashboard())
