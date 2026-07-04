@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor"}
 
 
 @dataclass(slots=True)
@@ -86,6 +86,8 @@ class AppleModelBuilder:
             accessory = self._build_scene(state)
         elif domain == "switch":
             accessory = self._build_switch(state)
+        elif domain == "sensor":
+            accessory = self._build_sensor(state)
         else:
             accessory = None
 
@@ -231,6 +233,26 @@ class AppleModelBuilder:
                 "reason": "Home Assistant switches map to simple on/off accessories.",
                 "supports": controls,
                 "recommendation": "Apple Switch",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_sensor(self, state: State) -> AppleAccessory:
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Sensor",
+            icon="mdi:gauge",
+            controls=["Value"],
+            capabilities={"sensor": True},
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Sensor",
+                "reason": "Sensors report values and map to read-only accessories.",
+                "supports": ["Value"],
+                "recommendation": "Apple Sensor",
             },
             diagnostics=self._diagnostics(state),
         )
