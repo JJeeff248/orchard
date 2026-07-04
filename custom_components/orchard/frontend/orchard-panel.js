@@ -241,8 +241,10 @@ class OrchardPanel extends HTMLElement {
           ${changes.length ? changes.map((change) => this.renderChangeItem(change)).join("") : `<div class="empty">No pending reviews</div>`}
           <div class="section-title">Accessories</div>
           ${accessories.length ? accessories.map((item) => this.renderAccessoryItem(item)).join("") : `<div class="empty">No synced accessories</div>`}
-          <div class="section-title">Ignored</div>
-          ${(this.state.ignored && this.state.ignored.length) ? this.state.ignored.map((item) => this.renderIgnoredItem(item)).join("") : `<div class="empty">No ignored accessories</div>`}
+          <details open class="ignored-section">
+            <summary class="section-title">Ignored (${(this.state.ignored || []).length})</summary>
+            ${(this.state.ignored && this.state.ignored.length) ? this.state.ignored.map((item) => this.renderIgnoredItem(item)).join("") : `<div class="empty">No ignored accessories</div>`}
+          </details>
         </aside>
         <main>
           <div class="brand">
@@ -305,10 +307,11 @@ class OrchardPanel extends HTMLElement {
   }
 
   renderIgnoredItem(item) {
+    const id = item.source_entity_id || item.entity_id;
     return `
-      <button class="item" data-select="${this.escape(item.entity_id)}" ${item.entity_id === this.selectedId ? "selected" : ""}>
+      <button class="item" data-select="${this.escape(id)}" ${id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="mdi:close-circle-outline"></ha-icon>
-        <span><strong>${this.escape(item.entity_id)}</strong><br><span class="muted">${this.escape(item.reason || "Ignored")}</span></span>
+        <span><strong>${this.escape(item.name || id)}</strong><br><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">Ignored</span>
       </button>
     `;
