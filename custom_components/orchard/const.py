@@ -10,7 +10,7 @@ VERSION = "0.2.1"
 PANEL_URL = "/orchard"
 PANEL_TITLE = "Orchard"
 # Serve the app icon from the integration API so we can use a custom image
-PANEL_ICON = "/api/orchard/icon.png"
+PANEL_ICON = "mdi:tree"
 
 STORAGE_KEY = f"{DOMAIN}.store"
 STORAGE_VERSION = 1
