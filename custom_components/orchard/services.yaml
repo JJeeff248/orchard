@@ -2,6 +2,10 @@ reconcile:
   name: Reconcile
   description: Rebuild the Orchard model from current Home Assistant state.
 
+sync_bridge:
+  name: Sync Apple Home bridge
+  description: Create or update the Orchard-managed Apple Home bridge from accepted accessories.
+
 accept_change:
   name: Accept change
   description: Accept a pending accessory review item.
@@ -23,4 +27,3 @@ ignore:
       required: true
       selector:
         entity: {}
-

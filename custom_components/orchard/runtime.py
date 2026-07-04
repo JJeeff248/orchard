@@ -14,6 +14,7 @@ from homeassistant.helpers.event import (
 )
 
 from .const import DEFAULT_RECONCILE_INTERVAL_MINUTES, EVENT_RUNTIME_UPDATED
+from .homekit_engine import OrchardHomeKitEngine
 from .model import SUPPORTED_DOMAINS, AppleModelBuilder
 from .storage import OrchardStorage
 
@@ -26,6 +27,7 @@ class OrchardRuntime:
         self.entry = entry
         self.storage = OrchardStorage(hass)
         self.builder = AppleModelBuilder(hass)
+        self.homekit = OrchardHomeKitEngine(hass)
         self._unsubscribers: list[Callable[[], None]] = []
         self.last_sync: str | None = None
 
@@ -63,7 +65,6 @@ class OrchardRuntime:
     def _scheduled_reconcile(self, _now: Any) -> None:
         self.hass.async_create_task(self.async_reconcile())
 
-    @callback
     @callback
     def _state_changed(self, event: Event) -> None:
         entity_id = event.data["entity_id"]
@@ -155,6 +156,7 @@ class OrchardRuntime:
         if accessory:
             self.storage.data.accessories[entity_id] = accessory
             self.storage.data.ignored.pop(entity_id, None)
+            await self.async_sync_bridge(save=False)
         await self._save_and_signal()
 
     async def async_ignore(self, entity_id: str) -> None:
@@ -165,6 +167,7 @@ class OrchardRuntime:
             "entity_id": entity_id,
             "reason": "Ignored by user",
         }
+        await self.async_sync_bridge(save=False)
         await self._save_and_signal()
 
     async def async_update_accessory(self, entity_id: str, updates: dict[str, Any]) -> None:
@@ -191,7 +194,16 @@ class OrchardRuntime:
                 accessory[key] = updates[key]
         self.storage.data.accessories[entity_id] = accessory
         self.storage.data.changes.pop(entity_id, None)
+        await self.async_sync_bridge(save=False)
         await self._save_and_signal()
+
+    async def async_sync_bridge(self, save: bool = True) -> dict[str, Any]:
+        """Synchronize accepted accessories to the Orchard-managed Apple Home bridge."""
+        result = await self.homekit.async_sync(list(self.storage.data.accessories.values()))
+        self.storage.data.settings["homekit_bridge"] = result
+        if save:
+            await self._save_and_signal()
+        return result
 
     async def async_mark_removed(self, entity_id: str, save: bool = True) -> None:
         """Mark a removed entity as needing review."""
@@ -212,6 +224,7 @@ class OrchardRuntime:
         awaiting = list(self.storage.data.changes.values())
         ignored = list(self.storage.data.ignored.values())
         needs_attention = [a for a in accessories if a.get("needs_attention")]
+        homekit_status = self.homekit.status()
         return {
             "status": "Connected",
             "accessory_count": len(accessories),
@@ -223,6 +236,7 @@ class OrchardRuntime:
             "accessories": accessories,
             "changes": awaiting,
             "ignored": ignored,
+            "homekit_bridge": self.storage.data.settings.get("homekit_bridge", homekit_status),
         }
 
     def _capabilities_changed(self, old_state: State, new_state: State) -> bool:

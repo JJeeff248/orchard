@@ -253,6 +253,7 @@ class OrchardPanel extends HTMLElement {
             ${this.metric("Review", this.state.awaiting_review_count)}
             ${this.metric("Attention", this.state.needs_attention_count)}
           </div>
+          ${this.renderBridge()}
           ${accessory ? this.renderAccessory(accessory) : `<div class="panel empty">Compatible lights and scenes will appear here.</div>`}
         </main>
       </div>
@@ -271,6 +272,21 @@ class OrchardPanel extends HTMLElement {
         <span><strong>${this.escape(item.name)}</strong><br><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">${this.escape(item.category)}</span>
       </button>
+    `;
+  }
+
+  renderBridge() {
+    const bridge = this.state.homekit_bridge || {};
+    return `
+      <section class="panel bridge">
+        <h2>Apple Home Bridge</h2>
+        <div class="row"><span class="muted">Status</span><strong>${this.escape(bridge.status || "Not Created")}</strong></div>
+        <div class="row"><span class="muted">Accessories</span><span>${this.escape(String(bridge.entity_count ?? 0))}</span></div>
+        <div class="row"><span class="muted">Paired</span><span>${bridge.paired ? "Yes" : "No"}</span></div>
+        ${bridge.pin_code ? `<div class="row"><span class="muted">PIN</span><code>${this.escape(bridge.pin_code)}</code></div>` : ""}
+        ${bridge.pairing_qr_url ? `<div class="row"><span class="muted">QR</span><a href="${this.escape(bridge.pairing_qr_url)}" target="_blank" rel="noreferrer">Open pairing QR</a></div>` : ""}
+        <div class="actions"><button class="action primary" data-sync-bridge>Sync Bridge</button></div>
+      </section>
     `;
   }
 
@@ -343,6 +359,8 @@ class OrchardPanel extends HTMLElement {
     });
     const reconcile = this.shadowRoot.querySelector("[data-reconcile]");
     if (reconcile) reconcile.addEventListener("click", () => this.post("orchard/reconcile"));
+    const syncBridge = this.shadowRoot.querySelector("[data-sync-bridge]");
+    if (syncBridge) syncBridge.addEventListener("click", () => this.post("orchard/bridge/sync"));
     const save = this.shadowRoot.querySelector("[data-save]");
     if (save) {
       save.addEventListener("click", () => {

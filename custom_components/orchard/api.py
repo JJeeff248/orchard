@@ -30,6 +30,7 @@ def async_register_api(hass: HomeAssistant) -> None:
     hass.http.register_view(AccessoryView)
     hass.http.register_view(ChangeView)
     hass.http.register_view(ReconcileView)
+    hass.http.register_view(BridgeView)
     hass.data[DOMAIN]["api_registered"] = True
 
 
@@ -113,4 +114,17 @@ class ReconcileView(HomeAssistantView):
         """Run reconciliation."""
         runtime = runtime_for(request.app[KEY_HASS])
         await runtime.async_reconcile()
+        return self.json(runtime.dashboard())
+
+
+class BridgeView(HomeAssistantView):
+    """Apple Home bridge endpoint."""
+
+    url = f"/api/{DOMAIN}/bridge/sync"
+    name = f"api:{DOMAIN}:bridge_sync"
+
+    async def post(self, request):
+        """Create or update the Orchard-managed HomeKit bridge."""
+        runtime = runtime_for(request.app[KEY_HASS])
+        await runtime.async_sync_bridge()
         return self.json(runtime.dashboard())
