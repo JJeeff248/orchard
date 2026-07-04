@@ -1,0 +1,26 @@
+reconcile:
+  name: Reconcile
+  description: Rebuild the Orchard model from current Home Assistant state.
+
+accept_change:
+  name: Accept change
+  description: Accept a pending accessory review item.
+  fields:
+    entity_id:
+      name: Accessory
+      description: Source entity for the accessory.
+      required: true
+      selector:
+        entity: {}
+
+ignore:
+  name: Ignore accessory
+  description: Hide an accessory from Orchard until manually reviewed.
+  fields:
+    entity_id:
+      name: Accessory
+      description: Source entity for the accessory.
+      required: true
+      selector:
+        entity: {}
+

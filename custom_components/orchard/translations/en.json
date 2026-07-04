@@ -1,0 +1,18 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Orchard",
+        "description": "The Apple Home experience Home Assistant deserves.",
+        "data": {
+          "name": "Name",
+          "reconcile_interval": "Reconciliation interval in minutes",
+          "auto_discover": "Discover new compatible accessories automatically"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Orchard is already configured."
+    }
+  }
+}
