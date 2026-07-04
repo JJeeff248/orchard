@@ -5,7 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from homeassistant.components.light import ATTR_SUPPORTED_COLOR_MODES, ColorMode
+from homeassistant.components.light import (
+    ATTR_EFFECT_LIST,
+    ATTR_SUPPORTED_COLOR_MODES,
+    LightEntityFeature,
+    brightness_supported,
+    color_supported,
+    color_temp_supported,
+)
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_SUPPORTED_FEATURES,
@@ -100,10 +107,7 @@ class AppleModelBuilder:
 
     def _build_light(self, state: State) -> AppleAccessory:
         attrs = state.attributes
-        color_modes = {
-            getattr(mode, "value", mode)
-            for mode in (attrs.get(ATTR_SUPPORTED_COLOR_MODES) or [])
-        }
+        color_modes = attrs.get(ATTR_SUPPORTED_COLOR_MODES) or set()
         features = int(attrs.get(ATTR_SUPPORTED_FEATURES) or 0)
         controls = ["Power"]
         capabilities: dict[str, Any] = {
@@ -113,23 +117,23 @@ class AppleModelBuilder:
             "hsv": False,
             "color_temperature": False,
             "effects": False,
-            "transitions": features > 0,
+            "transitions": bool(features & LightEntityFeature.TRANSITION),
             "adaptive_lighting": False,
         }
 
-        if ColorMode.BRIGHTNESS.value in color_modes or ColorMode.HS.value in color_modes or ColorMode.RGB.value in color_modes:
+        if brightness_supported(color_modes):
             controls.append("Brightness")
             capabilities["brightness"] = True
-        if ColorMode.RGB.value in color_modes or ColorMode.RGBW.value in color_modes or ColorMode.RGBWW.value in color_modes:
+        if color_supported(color_modes):
             controls.append("RGB")
             capabilities["rgb"] = True
-        if ColorMode.HS.value in color_modes:
+        if "hs" in color_modes:
             controls.append("HSV")
             capabilities["hsv"] = True
-        if ColorMode.COLOR_TEMP.value in color_modes or ColorMode.RGBWW.value in color_modes:
+        if color_temp_supported(color_modes):
             controls.append("Colour Temperature")
             capabilities["color_temperature"] = True
-        if attrs.get("effect_list"):
+        if attrs.get(ATTR_EFFECT_LIST):
             controls.append("Effects")
             capabilities["effects"] = True
 

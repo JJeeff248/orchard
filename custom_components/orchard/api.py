@@ -6,7 +6,7 @@ from pathlib import Path
 
 import voluptuous as vol
 from aiohttp import web
-from homeassistant.components.http import HomeAssistantView
+from homeassistant.components.http import KEY_HASS, HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
@@ -56,7 +56,7 @@ class DashboardView(HomeAssistantView):
 
     async def get(self, request):
         """Return current dashboard."""
-        return self.json(runtime_for(request.app["hass"]).dashboard())
+        return self.json(runtime_for(request.app[KEY_HASS]).dashboard())
 
 
 class AccessoryView(HomeAssistantView):
@@ -67,7 +67,7 @@ class AccessoryView(HomeAssistantView):
 
     async def post(self, request, entity_id: str):
         """Update accessory configuration."""
-        hass = request.app["hass"]
+        hass = request.app[KEY_HASS]
         data = await request.json()
         schema = vol.Schema(
             {
@@ -93,7 +93,7 @@ class ChangeView(HomeAssistantView):
 
     async def post(self, request, entity_id: str, action: str):
         """Accept or ignore a review item."""
-        runtime = runtime_for(request.app["hass"])
+        runtime = runtime_for(request.app[KEY_HASS])
         if action == "accept":
             await runtime.async_accept_change(entity_id)
         elif action == "ignore":
@@ -111,6 +111,6 @@ class ReconcileView(HomeAssistantView):
 
     async def post(self, request):
         """Run reconciliation."""
-        runtime = runtime_for(request.app["hass"])
+        runtime = runtime_for(request.app[KEY_HASS])
         await runtime.async_reconcile()
         return self.json(runtime.dashboard())
