@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor"}
 
 
 @dataclass(slots=True)
@@ -88,6 +88,8 @@ class AppleModelBuilder:
             accessory = self._build_switch(state)
         elif domain == "sensor":
             accessory = self._build_sensor(state)
+        elif domain == "binary_sensor":
+            accessory = self._build_binary_sensor(state)
         else:
             accessory = None
 
@@ -253,6 +255,26 @@ class AppleModelBuilder:
                 "reason": "Sensors report values and map to read-only accessories.",
                 "supports": ["Value"],
                 "recommendation": "Apple Sensor",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_binary_sensor(self, state: State) -> AppleAccessory:
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="BinarySensor",
+            icon="mdi:checkbox-marked-circle-outline",
+            controls=["State"],
+            capabilities={"binary_sensor": True},
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Binary Sensor",
+                "reason": "Binary sensors expose boolean states.",
+                "supports": ["State"],
+                "recommendation": "Apple Binary Sensor",
             },
             diagnostics=self._diagnostics(state),
         )
