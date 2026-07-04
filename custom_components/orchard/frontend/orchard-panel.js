@@ -342,7 +342,7 @@ class OrchardPanel extends HTMLElement {
         <section class="panel">
           <h1>${this.escape(item.name)}</h1>
           <div class="muted">${this.escape(item.category)} / ${this.escape(item.room || "No Room")}</div>
-          ${change ? `<div class="actions"><button class="action primary" data-accept="${this.escape(item.source_entity_id)}">Add</button><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button></div>` : (ignored ? `<div class="actions"><button class="action primary" data-unignore="${this.escape(item.source_entity_id)}">Unignore</button></div>` : "")}
+          ${change ? `<div class="actions"><button class="action primary" data-accept="${this.escape(item.source_entity_id)}">Add</button><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button></div>` : (ignored ? `<div class="actions"><button class="action primary" data-unignore="${this.escape(item.source_entity_id)}">Unignore</button></div>` : `<div class="actions"><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button><button class="action" data-remove="${this.escape(item.source_entity_id)}">Remove</button></div>`)}
           <div class="row"><span class="muted">Appears as</span><strong>${this.escape(item.category)}</strong></div>
           <div class="row"><span class="muted">Room</span><span>${this.escape(item.room || "No Room")}</span></div>
           <div class="row"><span class="muted">Controls</span><div class="chips">${item.controls.map((control) => `<span class="chip">${this.escape(control)}</span>`).join("")}</div></div>
@@ -394,6 +394,9 @@ class OrchardPanel extends HTMLElement {
     });
     this.shadowRoot.querySelectorAll("[data-unignore]").forEach((button) => {
       button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/ignored/${button.dataset.unignore}/unignore`); });
+    });
+    this.shadowRoot.querySelectorAll("[data-remove]").forEach((button) => {
+      button.addEventListener("click", (e) => { e.stopPropagation(); if (confirm("Permanently remove this accessory from Orchard?")) { this.post(`orchard/accessory/${button.dataset.remove}/delete`); } });
     });
     const reconcile = this.shadowRoot.querySelector("[data-reconcile]");
     if (reconcile) reconcile.addEventListener("click", () => this.post("orchard/reconcile"));

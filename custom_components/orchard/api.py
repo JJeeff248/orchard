@@ -160,3 +160,15 @@ class UnignoreView(HomeAssistantView):
         runtime = runtime_for(request.app[KEY_HASS])
         await runtime.async_unignore(entity_id)
         return self.json(runtime.dashboard())
+
+
+class RemoveAccessoryView(HomeAssistantView):
+    """Endpoint to permanently remove an accessory."""
+
+    url = f"/api/{DOMAIN}/accessory/{{entity_id}}/delete"
+    name = f"api:{DOMAIN}:accessory:delete"
+
+    async def post(self, request, entity_id: str):
+        runtime = runtime_for(request.app[KEY_HASS])
+        await runtime.async_remove_accessory(entity_id)
+        return self.json(runtime.dashboard())
