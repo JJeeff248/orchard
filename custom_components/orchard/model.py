@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock", "media_player"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock", "media_player", "vacuum"}
 
 
 @dataclass(slots=True)
@@ -98,6 +98,8 @@ class AppleModelBuilder:
             accessory = self._build_lock(state)
         elif domain == "media_player":
             accessory = self._build_media_player(state)
+        elif domain == "vacuum":
+            accessory = self._build_vacuum(state)
         else:
             accessory = None
 
@@ -371,6 +373,28 @@ class AppleModelBuilder:
                 "reason": "Media players support play/pause/track controls.",
                 "supports": controls,
                 "recommendation": "Apple Media Player",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_vacuum(self, state: State) -> AppleAccessory:
+        controls = ["Start", "Stop", "Dock"]
+        capabilities = {"vacuum": True}
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Vacuum",
+            icon="mdi:robot-vacuum",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Vacuum",
+                "reason": "Vacuums support start/stop/dock commands.",
+                "supports": controls,
+                "recommendation": "Apple Vacuum",
             },
             diagnostics=self._diagnostics(state),
         )
