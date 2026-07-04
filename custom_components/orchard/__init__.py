@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from homeassistant.components import frontend
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
@@ -29,7 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["runtime"] = runtime
 
     async_register_api(hass)
-    hass.components.frontend.async_register_built_in_panel(
+    frontend.async_register_built_in_panel(
+        hass,
         component_name="custom",
         sidebar_title=PANEL_TITLE,
         sidebar_icon=PANEL_ICON,
@@ -41,6 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             }
         },
         require_admin=True,
+        update=True,
     )
     return True
 
@@ -52,6 +55,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await runtime.async_stop()
     if hass.data.get(DOMAIN, {}).get("runtime") is runtime:
         hass.data[DOMAIN].pop("runtime", None)
-    hass.components.frontend.async_remove_panel(PANEL_URL.strip("/"))
+    frontend.async_remove_panel(hass, PANEL_URL.strip("/"), warn_if_unknown=False)
     return True
-
