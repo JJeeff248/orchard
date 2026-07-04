@@ -14,7 +14,7 @@ from .const import DOMAIN
 from .runtime import OrchardRuntime
 
 PANEL_PATH = Path(__file__).parent / "frontend" / "orchard-panel.js"
-ICON_PATH = Path(__file__).parent.parent.parent / "OrchardIcon.png"
+ICON_PATH = Path(__file__).parent / "frontend" / "OrchardIcon.png"
 
 
 def runtime_for(hass: HomeAssistant) -> OrchardRuntime:
