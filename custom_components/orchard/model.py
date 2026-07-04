@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock", "media_player"}
 
 
 @dataclass(slots=True)
@@ -96,6 +96,8 @@ class AppleModelBuilder:
             accessory = self._build_climate(state)
         elif domain == "lock":
             accessory = self._build_lock(state)
+        elif domain == "media_player":
+            accessory = self._build_media_player(state)
         else:
             accessory = None
 
@@ -347,6 +349,28 @@ class AppleModelBuilder:
                 "reason": "Locks expose lock/unlock controls.",
                 "supports": controls,
                 "recommendation": "Apple Lock",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_media_player(self, state: State) -> AppleAccessory:
+        controls = ["Play", "Pause", "Stop", "Next", "Previous", "Volume"]
+        capabilities = {"media_control": True, "volume": True}
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="MediaPlayer",
+            icon="mdi:cast",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Media Player",
+                "reason": "Media players support play/pause/track controls.",
+                "supports": controls,
+                "recommendation": "Apple Media Player",
             },
             diagnostics=self._diagnostics(state),
         )
