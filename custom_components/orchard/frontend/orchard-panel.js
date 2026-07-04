@@ -272,7 +272,7 @@ class OrchardPanel extends HTMLElement {
 
   renderAccessoryItem(item) {
     return `
-      <button class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
+      <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
         <span><strong>${this.escape(item.name)}</strong><br><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">${this.escape(item.category)}</span>
@@ -298,7 +298,7 @@ class OrchardPanel extends HTMLElement {
   renderChangeItem(change) {
     const item = change.accessory;
     return `
-      <button class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
+      <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
         <span><strong>${this.escape(item.name)}</strong><br><span class="muted">${this.escape(change.recommended)}</span></span>
         <span class="badge">Review</span>
@@ -309,7 +309,7 @@ class OrchardPanel extends HTMLElement {
   renderIgnoredItem(item) {
     const id = item.source_entity_id || item.entity_id;
     return `
-      <button class="item" data-select="${this.escape(id)}" ${id === this.selectedId ? "selected" : ""}>
+      <button type="button" class="item" data-select="${this.escape(id)}" ${id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="mdi:close-circle-outline"></ha-icon>
         <span><strong>${this.escape(item.name || id)}</strong><br><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">Ignored</span>
@@ -363,19 +363,20 @@ class OrchardPanel extends HTMLElement {
 
   bind() {
     this.shadowRoot.querySelectorAll("[data-select]").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", (e) => {
+        e.stopPropagation();
         this.selectedId = button.dataset.select;
         this.render();
       });
     });
     this.shadowRoot.querySelectorAll("[data-accept]").forEach((button) => {
-      button.addEventListener("click", () => this.post(`orchard/change/${button.dataset.accept}/accept`));
+      button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/change/${button.dataset.accept}/accept`); });
     });
     this.shadowRoot.querySelectorAll("[data-ignore]").forEach((button) => {
-      button.addEventListener("click", () => this.post(`orchard/change/${button.dataset.ignore}/ignore`));
+      button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/change/${button.dataset.ignore}/ignore`); });
     });
     this.shadowRoot.querySelectorAll("[data-unignore]").forEach((button) => {
-      button.addEventListener("click", () => this.post(`orchard/ignored/${button.dataset.unignore}/unignore`));
+      button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/ignored/${button.dataset.unignore}/unignore`); });
     });
     const reconcile = this.shadowRoot.querySelector("[data-reconcile]");
     if (reconcile) reconcile.addEventListener("click", () => this.post("orchard/reconcile"));
