@@ -229,36 +229,36 @@ class OrchardRuntime:
         """Return health dashboard state."""
         accessories = list(self.storage.data.accessories.values())
         awaiting = list(self.storage.data.changes.values())
-            # Enrich ignored items with friendly name and area where possible
-            ignored: list[dict[str, Any]] = []
-            for ent_id, info in self.storage.data.ignored.items():
-                name = None
-                room = None
-                state = self.hass.states.get(ent_id)
-                if state is not None:
-                    name = str(state.attributes.get("friendly_name") or state.object_id.replace("_", " ").title())
-                # try to get area from entity registry
-                try:
-                    from homeassistant.helpers import entity_registry as er
+    # Enrich ignored items with friendly name and area where possible
+    ignored: list[dict[str, Any]] = []
+    for ent_id, info in self.storage.data.ignored.items():
+        name = None
+        room = None
+        state = self.hass.states.get(ent_id)
+        if state is not None:
+            name = str(state.attributes.get("friendly_name") or state.object_id.replace("_", " ").title())
+        # try to get area from entity registry
+        try:
+            from homeassistant.helpers import entity_registry as er
 
-                    entity_registry = er.async_get(self.hass)
-                    entry = entity_registry.async_get(ent_id)
-                    if entry and entry.area_id:
-                        from homeassistant.helpers import area_registry as ar
+            entity_registry = er.async_get(self.hass)
+            entry = entity_registry.async_get(ent_id)
+            if entry and entry.area_id:
+                from homeassistant.helpers import area_registry as ar
 
-                        area_registry = ar.async_get(self.hass)
-                        area = area_registry.async_get_area(entry.area_id)
-                        room = area.name if area else None
-                except Exception:
-                    room = None
+                area_registry = ar.async_get(self.hass)
+                area = area_registry.async_get_area(entry.area_id)
+                room = area.name if area else None
+        except Exception:
+            room = None
 
-                ignored.append({
-                    "entity_id": ent_id,
-                    "source_entity_id": ent_id,
-                    "name": name or ent_id,
-                    "room": room,
-                    "reason": info.get("reason"),
-                })
+        ignored.append({
+            "entity_id": ent_id,
+            "source_entity_id": ent_id,
+            "name": name or ent_id,
+            "room": room,
+            "reason": info.get("reason"),
+        })
         needs_attention = [a for a in accessories if a.get("needs_attention")]
         homekit_status = self.homekit.status()
         return {
