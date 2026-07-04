@@ -2,12 +2,11 @@
   "domain": "orchard",
   "name": "Orchard",
   "version": "0.1.0",
-  "codeowners": ["@chris"],
+  "codeowners": ["@JJeeff248"],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
-  "documentation": "https://github.com/chris/orchard",
+  "documentation": "https://github.com/JJeeff248/orchard",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/chris/orchard/issues",
+  "issue_tracker": "https://github.com/JJeeff248/orchard/issues",
   "requirements": []
 }
-
