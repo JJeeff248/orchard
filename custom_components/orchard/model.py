@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch"}
 
 
 @dataclass(slots=True)
@@ -82,8 +82,12 @@ class AppleModelBuilder:
         custom = custom or {}
         if domain == "light":
             accessory = self._build_light(state)
-        else:
+        elif domain == "scene":
             accessory = self._build_scene(state)
+        elif domain == "switch":
+            accessory = self._build_switch(state)
+        else:
+            accessory = None
 
         merged = accessory.as_dict()
         merged.update({key: value for key, value in custom.items() if value is not None})
@@ -200,3 +204,33 @@ class AppleModelBuilder:
             "domain": state.domain,
             "attributes": dict(state.attributes),
         }
+
+    def _build_switch(self, state: State) -> AppleAccessory:
+        attrs = state.attributes
+        controls = ["Power"]
+        capabilities = {"on_off": True}
+
+        if state.state in {STATE_UNAVAILABLE, STATE_UNKNOWN}:
+            needs_attention = True
+        else:
+            needs_attention = False
+
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Switch",
+            icon="mdi:toggle-switch",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            needs_attention=needs_attention,
+            explanation={
+                "mapped_as": "Apple Switch",
+                "reason": "Home Assistant switches map to simple on/off accessories.",
+                "supports": controls,
+                "recommendation": "Apple Switch",
+            },
+            diagnostics=self._diagnostics(state),
+        )
