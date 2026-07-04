@@ -37,6 +37,7 @@ class OrchardPanel extends HTMLElement {
     if (!this.state) return null;
     return this.state.accessories.find((item) => item.source_entity_id === this.selectedId)
       || this.state.changes.map((item) => item.accessory).find((item) => item.source_entity_id === this.selectedId)
+      || (this.state.ignored || []).map((item) => ({ source_entity_id: item.entity_id, name: item.entity_id, icon: "mdi:home" })).find((item) => item.source_entity_id === this.selectedId)
       || this.state.accessories[0]
       || null;
   }
@@ -240,6 +241,8 @@ class OrchardPanel extends HTMLElement {
           ${changes.length ? changes.map((change) => this.renderChangeItem(change)).join("") : `<div class="empty">No pending reviews</div>`}
           <div class="section-title">Accessories</div>
           ${accessories.length ? accessories.map((item) => this.renderAccessoryItem(item)).join("") : `<div class="empty">No synced accessories</div>`}
+          <div class="section-title">Ignored</div>
+          ${(this.state.ignored && this.state.ignored.length) ? this.state.ignored.map((item) => this.renderIgnoredItem(item)).join("") : `<div class="empty">No ignored accessories</div>`}
         </aside>
         <main>
           <div class="brand">
@@ -301,14 +304,25 @@ class OrchardPanel extends HTMLElement {
     `;
   }
 
+  renderIgnoredItem(item) {
+    return `
+      <button class="item" data-select="${this.escape(item.entity_id)}" ${item.entity_id === this.selectedId ? "selected" : ""}>
+        <ha-icon icon="mdi:close-circle-outline"></ha-icon>
+        <span><strong>${this.escape(item.entity_id)}</strong><br><span class="muted">${this.escape(item.reason || "Ignored")}</span></span>
+        <span class="badge">Ignored</span>
+      </button>
+    `;
+  }
+
   renderAccessory(item) {
     const change = (this.state.changes || []).find((candidate) => candidate.accessory.source_entity_id === item.source_entity_id);
+    const ignored = (this.state.ignored || []).find((i) => i.entity_id === item.source_entity_id);
     return `
       <div class="grid">
         <section class="panel">
           <h1>${this.escape(item.name)}</h1>
           <div class="muted">${this.escape(item.category)} / ${this.escape(item.room || "No Room")}</div>
-          ${change ? `<div class="actions"><button class="action primary" data-accept="${this.escape(item.source_entity_id)}">Add</button><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button></div>` : ""}
+          ${change ? `<div class="actions"><button class="action primary" data-accept="${this.escape(item.source_entity_id)}">Add</button><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button></div>` : (ignored ? `<div class="actions"><button class="action primary" data-unignore="${this.escape(item.source_entity_id)}">Unignore</button></div>` : "")}
           <div class="row"><span class="muted">Appears as</span><strong>${this.escape(item.category)}</strong></div>
           <div class="row"><span class="muted">Room</span><span>${this.escape(item.room || "No Room")}</span></div>
           <div class="row"><span class="muted">Controls</span><div class="chips">${item.controls.map((control) => `<span class="chip">${this.escape(control)}</span>`).join("")}</div></div>
@@ -356,6 +370,9 @@ class OrchardPanel extends HTMLElement {
     });
     this.shadowRoot.querySelectorAll("[data-ignore]").forEach((button) => {
       button.addEventListener("click", () => this.post(`orchard/change/${button.dataset.ignore}/ignore`));
+    });
+    this.shadowRoot.querySelectorAll("[data-unignore]").forEach((button) => {
+      button.addEventListener("click", () => this.post(`orchard/ignored/${button.dataset.unignore}/unignore`));
     });
     const reconcile = this.shadowRoot.querySelector("[data-reconcile]");
     if (reconcile) reconcile.addEventListener("click", () => this.post("orchard/reconcile"));

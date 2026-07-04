@@ -31,6 +31,7 @@ def async_register_api(hass: HomeAssistant) -> None:
     hass.http.register_view(DashboardView)
     hass.http.register_view(AccessoryView)
     hass.http.register_view(ChangeView)
+    hass.http.register_view(UnignoreView)
     hass.http.register_view(ReconcileView)
     hass.http.register_view(BridgeView)
     hass.data[DOMAIN]["api_registered"] = True
@@ -146,4 +147,16 @@ class BridgeView(HomeAssistantView):
         """Create or update the Orchard-managed HomeKit bridge."""
         runtime = runtime_for(request.app[KEY_HASS])
         await runtime.async_sync_bridge()
+        return self.json(runtime.dashboard())
+
+
+class UnignoreView(HomeAssistantView):
+    """Endpoint to unignore an entity."""
+
+    url = f"/api/{DOMAIN}/ignored/{{entity_id}}/unignore"
+    name = f"api:{DOMAIN}:ignored:unignore"
+
+    async def post(self, request, entity_id: str):
+        runtime = runtime_for(request.app[KEY_HASS])
+        await runtime.async_unignore(entity_id)
         return self.json(runtime.dashboard())

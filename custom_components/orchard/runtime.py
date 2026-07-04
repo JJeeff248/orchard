@@ -170,6 +170,13 @@ class OrchardRuntime:
         await self.async_sync_bridge(save=False)
         await self._save_and_signal()
 
+    async def async_unignore(self, entity_id: str) -> None:
+        """Remove an entity from the ignored list and queue it for review."""
+        self.storage.data.ignored.pop(entity_id, None)
+        # Re-add to review so it shows up in the panel
+        await self.async_review_entity(entity_id)
+        await self._save_and_signal()
+
     async def async_update_accessory(self, entity_id: str, updates: dict[str, Any]) -> None:
         """Update user-facing accessory configuration."""
         accessory = self.storage.data.accessories.get(entity_id)
