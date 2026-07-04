@@ -23,7 +23,7 @@ from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor"}
+SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover"}
 
 
 @dataclass(slots=True)
@@ -90,6 +90,8 @@ class AppleModelBuilder:
             accessory = self._build_sensor(state)
         elif domain == "binary_sensor":
             accessory = self._build_binary_sensor(state)
+        elif domain == "cover":
+            accessory = self._build_cover(state)
         else:
             accessory = None
 
@@ -275,6 +277,28 @@ class AppleModelBuilder:
                 "reason": "Binary sensors expose boolean states.",
                 "supports": ["State"],
                 "recommendation": "Apple Binary Sensor",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_cover(self, state: State) -> AppleAccessory:
+        controls = ["Open", "Close", "Stop"]
+        capabilities = {"open_close": True, "stop": True}
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Cover",
+            icon="mdi:window-open-variant",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            explanation={
+                "mapped_as": "Apple Cover",
+                "reason": "Covers can be opened/closed and stopped.",
+                "supports": controls,
+                "recommendation": "Apple Cover",
             },
             diagnostics=self._diagnostics(state),
         )
