@@ -14,6 +14,7 @@ from .const import DOMAIN
 from .runtime import OrchardRuntime
 
 PANEL_PATH = Path(__file__).parent / "frontend" / "orchard-panel.js"
+BRAND_ICON_PATH = Path(__file__).parent / "brand" / "icon.png"
 
 
 def runtime_for(hass: HomeAssistant) -> OrchardRuntime:
@@ -26,6 +27,7 @@ def async_register_api(hass: HomeAssistant) -> None:
     if hass.data[DOMAIN].get("api_registered"):
         return
     hass.http.register_view(FrontendAssetView)
+    hass.http.register_view(BrandIconView)
     hass.http.register_view(DashboardView)
     hass.http.register_view(AccessoryView)
     hass.http.register_view(ChangeView)
@@ -47,6 +49,21 @@ class FrontendAssetView(HomeAssistantView):
         return web.Response(
             text=PANEL_PATH.read_text(encoding="utf-8"),
             content_type="text/javascript",
+        )
+
+
+class BrandIconView(HomeAssistantView):
+    """Serve the Orchard brand icon."""
+
+    url = f"/api/{DOMAIN}/brand/icon.png"
+    name = f"api:{DOMAIN}:brand:icon"
+    requires_auth = False
+
+    async def get(self, _request):
+        """Return the brand icon."""
+        return web.Response(
+            body=BRAND_ICON_PATH.read_bytes(),
+            content_type="image/png",
         )
 
 
