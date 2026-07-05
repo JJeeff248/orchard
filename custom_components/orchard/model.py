@@ -25,7 +25,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_registry import EntityCategory
 
 SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock", "media_player", "vacuum"}
-DISCOVERY_DOMAINS = frozenset({"light", "scene", "cover", "climate", "lock", "media_player", "vacuum"})
+DISCOVERY_DOMAINS = frozenset({"light", "scene", "switch", "cover", "climate", "lock", "media_player", "vacuum"})
 
 
 @dataclass(slots=True)
