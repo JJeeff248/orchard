@@ -5,7 +5,7 @@ from __future__ import annotations
 DOMAIN = "orchard"
 NAME = "Orchard"
 TAGLINE = "The Apple Home experience Home Assistant deserves."
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 PANEL_URL = "/orchard"
 PANEL_TITLE = "Orchard"

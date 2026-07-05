@@ -123,9 +123,16 @@ class OrchardPanel extends HTMLElement {
         .brand-mark {
           width: 44px;
           height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           border-radius: 8px;
-          object-fit: cover;
           background: var(--orchard-band);
+        }
+        .brand-mark ha-icon {
+          width: 28px;
+          height: 28px;
+          color: var(--orchard-accent);
         }
         .sidebar-head strong {
           display: block;
@@ -518,7 +525,7 @@ class OrchardPanel extends HTMLElement {
       <div class="shell">
         <aside>
           <div class="sidebar-head">
-            <img class="brand-mark" src="/api/brands/integration/orchard/icon.png" alt="">
+            <span class="brand-mark"><ha-icon icon="mdi:tree"></ha-icon></span>
             <div>
               <strong>Orchard</strong>
               <span>The Apple Home experience Home Assistant deserves.</span>

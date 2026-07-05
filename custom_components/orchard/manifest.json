@@ -1,7 +1,7 @@
 {
   "domain": "orchard",
   "name": "Orchard",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "codeowners": ["@JJeeff248"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "homekit"],

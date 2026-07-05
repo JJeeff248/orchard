@@ -122,6 +122,10 @@ class OrchardRuntime:
     async def async_reconcile(self) -> None:
         """Rebuild the model and repair missed events."""
         seen: set[str] = set()
+        for entity_id in list(self.storage.data.changes):
+            if entity_id in self.storage.data.accessories or entity_id in self.storage.data.ignored:
+                self.storage.data.changes.pop(entity_id, None)
+
         for state in self.hass.states.async_all():
             if state.domain not in SUPPORTED_DOMAINS:
                 continue
@@ -228,7 +232,12 @@ class OrchardRuntime:
     def dashboard(self) -> dict[str, Any]:
         """Return health dashboard state."""
         accessories = list(self.storage.data.accessories.values())
-        awaiting = list(self.storage.data.changes.values())
+        awaiting = [
+            change
+            for entity_id, change in self.storage.data.changes.items()
+            if entity_id not in self.storage.data.accessories
+            and entity_id not in self.storage.data.ignored
+        ]
 
         # Enrich ignored items with friendly name and area where possible
         ignored: list[dict[str, Any]] = []
