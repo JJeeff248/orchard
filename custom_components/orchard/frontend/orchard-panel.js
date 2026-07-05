@@ -406,6 +406,10 @@ class OrchardPanel extends HTMLElement {
           align-items: flex-start;
           justify-content: space-between;
           gap: 14px;
+          margin-bottom: 12px;
+        }
+        .panel-head + .actions {
+          margin-left: 54px;
           margin-bottom: 14px;
         }
         .accessory-title {
@@ -415,34 +419,52 @@ class OrchardPanel extends HTMLElement {
           gap: 12px;
           align-items: center;
         }
-        .accessory-title ha-icon {
-          width: 30px;
-          height: 30px;
-          padding: 6px;
+        .accessory-icon {
+          width: 42px;
+          height: 42px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
           border-radius: 8px;
-          color: var(--orchard-accent);
           background: var(--orchard-accent-soft);
+        }
+        .accessory-icon ha-icon {
+          width: 24px;
+          height: 24px;
+          color: var(--orchard-accent);
+          --mdc-icon-size: 24px;
         }
         .accessory-title h1 {
           overflow-wrap: anywhere;
         }
+        .accessory-title .muted {
+          margin-top: 2px;
+        }
         .rows {
+          display: grid;
+          grid-template-columns: max-content minmax(0, 1fr);
+          column-gap: 20px;
+          align-items: center;
           border-top: 1px solid var(--orchard-line);
         }
         .row {
-          display: grid;
-          grid-template-columns: 142px minmax(0, 1fr);
-          gap: 12px;
-          padding: 11px 0;
+          display: contents;
+        }
+        .rows > .row > .muted,
+        .rows > .row > *:not(.muted) {
+          padding: 12px 0;
           border-bottom: 1px solid var(--orchard-line);
         }
-        .row:last-child {
+        .rows > .row:last-child > .muted,
+        .rows > .row:last-child > *:not(.muted) {
           border-bottom: 0;
         }
         .chips {
           display: flex;
           flex-wrap: wrap;
           gap: 7px;
+          align-items: center;
         }
         .chip {
           min-height: 26px;
@@ -516,9 +538,26 @@ class OrchardPanel extends HTMLElement {
           .top {
             grid-template-columns: repeat(2, minmax(118px, 1fr));
           }
+          .rows {
+            grid-template-columns: 1fr;
+          }
           .row {
+            display: grid;
             grid-template-columns: 1fr;
             gap: 4px;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--orchard-line);
+          }
+          .rows > .row > .muted,
+          .rows > .row > *:not(.muted) {
+            padding: 0;
+            border-bottom: 0;
+          }
+          .row:last-child {
+            border-bottom: 0;
+          }
+          .panel-head + .actions {
+            margin-left: 0;
           }
         }
       </style>
@@ -641,7 +680,7 @@ class OrchardPanel extends HTMLElement {
         <section class="panel">
           <div class="panel-head">
             <div class="accessory-title">
-              <ha-icon icon="${this.escape(item.icon || "mdi:home")}"></ha-icon>
+              <span class="accessory-icon"><ha-icon icon="${this.escape(item.icon || "mdi:home")}"></ha-icon></span>
               <div>
                 <h1>${this.escape(item.name)}</h1>
                 <div class="muted">${this.escape(item.category)} / ${this.escape(item.room || "No Room")}</div>
