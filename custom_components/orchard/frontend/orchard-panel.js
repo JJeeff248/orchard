@@ -3,6 +3,7 @@ class OrchardPanel extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this.state = null;
     this.selectedId = null;
+    this.sectionState = { review: true, accessories: true, ignored: false };
     this.load();
     this._unsub = this.hass.connection.subscribeEvents(() => this.load(), "orchard_updated");
   }
@@ -73,6 +74,7 @@ class OrchardPanel extends HTMLElement {
 
   render() {
     if (!this.shadowRoot || !this.state) return;
+    this._captureSectionState();
     const accessory = this.accessory();
     const changes = this.state.changes || [];
     const accessories = this.state.accessories || [];
@@ -162,6 +164,24 @@ class OrchardPanel extends HTMLElement {
         }
         details > summary::-webkit-details-marker {
           display: none;
+        }
+        .sidebar-section > summary.section-title {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          gap: 8px;
+          align-items: center;
+        }
+        .sidebar-section > summary.section-title::before {
+          content: "";
+          width: 0;
+          height: 0;
+          border-top: 4px solid transparent;
+          border-bottom: 4px solid transparent;
+          border-left: 5px solid var(--secondary-text-color);
+          transition: transform 0.15s ease;
+        }
+        .sidebar-section[open] > summary.section-title::before {
+          transform: rotate(90deg);
         }
         .count {
           min-width: 24px;
@@ -595,12 +615,9 @@ class OrchardPanel extends HTMLElement {
               <span>The Apple Home experience Home Assistant deserves.</span>
             </div>
           </div>
-          ${this.renderSidebarSection("Awaiting Review", changes.length, changes, (change) => this.renderChangeItem(change))}
-          ${this.renderSidebarSection("Accessories", accessories.length, accessories, (item) => this.renderAccessoryItem(item))}
-          <details open>
-            <summary class="section-title"><span>Ignored</span><span class="count">${ignored.length}</span></summary>
-            ${ignored.length ? ignored.map((item) => this.renderIgnoredItem(item)).join("") : `<div class="empty">No ignored accessories</div>`}
-          </details>
+          ${this.renderSidebarSection("Awaiting Review", changes.length, changes, (change) => this.renderChangeItem(change), "review")}
+          ${this.renderSidebarSection("Accessories", accessories.length, accessories, (item) => this.renderAccessoryItem(item), "accessories")}
+          ${this.renderSidebarSection("Ignored", ignored.length, ignored, (item) => this.renderIgnoredItem(item), "ignored", "No ignored accessories")}
         </aside>
         <main>
           <div class="masthead">
@@ -628,10 +645,20 @@ class OrchardPanel extends HTMLElement {
     this.bind();
   }
 
-  renderSidebarSection(title, count, items, renderer) {
+  _captureSectionState() {
+    if (!this.shadowRoot) return;
+    this.shadowRoot.querySelectorAll("details[data-section]").forEach((element) => {
+      this.sectionState[element.dataset.section] = element.open;
+    });
+  }
+
+  renderSidebarSection(title, count, items, renderer, sectionKey, emptyLabel = "None") {
+    const open = this.sectionState[sectionKey] ?? true;
     return `
-      <div class="section-title"><span>${this.escape(title)}</span><span class="count">${this.escape(String(count))}</span></div>
-      ${items.length ? items.map((item) => renderer(item)).join("") : `<div class="empty">None</div>`}
+      <details class="sidebar-section" data-section="${sectionKey}" ${open ? "open" : ""}>
+        <summary class="section-title"><span>${this.escape(title)}</span><span class="count">${this.escape(String(count))}</span></summary>
+        ${items.length ? items.map((item) => renderer(item)).join("") : `<div class="empty">${this.escape(emptyLabel)}</div>`}
+      </details>
     `;
   }
 
