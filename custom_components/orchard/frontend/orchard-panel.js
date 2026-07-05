@@ -22,8 +22,11 @@ class OrchardPanel extends HTMLElement {
   async load() {
     if (!this.hass) return;
     this.state = await this.hass.callApi("GET", "orchard/dashboard");
-    if (!this.selectedId && this.state.accessories.length) {
-      this.selectedId = this.state.accessories[0].source_entity_id;
+    if (!this.selectedId) {
+      const firstChange = (this.state.changes || [])[0]?.accessory?.source_entity_id;
+      const firstAccessory = (this.state.accessories || [])[0]?.source_entity_id;
+      const firstIgnored = (this.state.ignored || [])[0]?.entity_id;
+      this.selectedId = firstChange || firstAccessory || firstIgnored || null;
     }
     this.render();
   }
@@ -35,26 +38,35 @@ class OrchardPanel extends HTMLElement {
 
   accessory() {
     if (!this.state) return null;
+    const changes = this.state.changes || [];
+    const accessories = this.state.accessories || [];
+    const ignored = this.state.ignored || [];
+
     return (
-      this.state.accessories.find((item) => item.source_entity_id === this.selectedId)
-      || this.state.changes.map((item) => item.accessory).find((item) => item.source_entity_id === this.selectedId)
-      || (this.state.ignored || [])
+      accessories.find((item) => item.source_entity_id === this.selectedId)
+      || changes.map((item) => item.accessory).find((item) => item.source_entity_id === this.selectedId)
+      || ignored
         .map((item) => ({
           source_entity_id: item.entity_id,
           name: item.name || item.entity_id,
-          icon: "mdi:home",
-          category: "Unknown",
+          icon: "mdi:close-circle-outline",
+          category: "Ignored",
           room: item.room || null,
           controls: [],
           capabilities: {},
-          exposure: "individual",
+          exposure: "hidden",
           siri_name: item.name || item.entity_id,
-          visible: true,
+          visible: false,
           state: null,
-          explanation: { mapped_as: "Ignored" },
+          explanation: {
+            mapped_as: "Ignored",
+            reason: item.reason || "This accessory is hidden from Orchard review and bridge sync.",
+            recommendation: "Unignore when you want Orchard to review it again.",
+          },
         }))
         .find((item) => item.source_entity_id === this.selectedId)
-      || this.state.accessories[0]
+      || accessories[0]
+      || changes[0]?.accessory
       || null
     );
   }
@@ -64,112 +76,171 @@ class OrchardPanel extends HTMLElement {
     const accessory = this.accessory();
     const changes = this.state.changes || [];
     const accessories = this.state.accessories || [];
+    const ignored = this.state.ignored || [];
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          --orchard-accent: #2f855a;
+          --orchard-accent-soft: rgba(47, 133, 90, 0.13);
+          --orchard-info: #2563eb;
+          --orchard-warn: #b7791f;
+          --orchard-danger: #c2410c;
+          --orchard-surface: var(--card-background-color);
+          --orchard-band: var(--secondary-background-color);
+          --orchard-line: var(--divider-color);
           display: block;
           min-height: 100vh;
           color: var(--primary-text-color);
           background: var(--primary-background-color);
           font-family: var(--paper-font-body1_-_font-family);
         }
+        * {
+          box-sizing: border-box;
+        }
         .shell {
           display: grid;
-          grid-template-columns: minmax(260px, 340px) 1fr;
+          grid-template-columns: 336px minmax(0, 1fr);
           min-height: calc(100vh - 64px);
         }
         aside {
-          border-right: 1px solid var(--divider-color);
-          background: var(--card-background-color);
           min-width: 0;
+          border-right: 1px solid var(--orchard-line);
+          background: var(--orchard-surface);
         }
         main {
           min-width: 0;
           padding: 24px;
         }
-        .top {
+        .sidebar-head {
           display: grid;
-          grid-template-columns: repeat(5, minmax(120px, 1fr));
+          grid-template-columns: 44px 1fr;
           gap: 12px;
-          margin-bottom: 20px;
+          align-items: center;
+          padding: 18px 16px;
+          border-bottom: 1px solid var(--orchard-line);
         }
-        .metric, .panel {
-          border: 1px solid var(--divider-color);
+        .brand-mark {
+          width: 44px;
+          height: 44px;
           border-radius: 8px;
-          background: var(--card-background-color);
+          object-fit: cover;
+          background: var(--orchard-band);
         }
-        .metric {
-          padding: 14px;
-          min-height: 76px;
-        }
-        .metric strong {
+        .sidebar-head strong {
           display: block;
-          font-size: 24px;
-          line-height: 30px;
+          font-size: 17px;
+          line-height: 22px;
         }
-        .metric span, .muted {
+        .sidebar-head span,
+        .muted {
           color: var(--secondary-text-color);
           font-size: 13px;
         }
         .section-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
           padding: 16px 16px 8px;
-          font-size: 13px;
-          font-weight: 700;
-          text-transform: uppercase;
           color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0;
+          text-transform: uppercase;
+        }
+        details > summary {
+          cursor: pointer;
+          list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+          display: none;
+        }
+        .count {
+          min-width: 24px;
+          height: 22px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 7px;
+          border-radius: 999px;
+          background: var(--orchard-band);
+          color: var(--secondary-text-color);
+          font-size: 12px;
         }
         .item {
           width: 100%;
+          min-height: 58px;
           display: grid;
-          grid-template-columns: 32px 1fr auto;
+          grid-template-columns: 34px minmax(0, 1fr) auto;
           gap: 10px;
           align-items: center;
-          padding: 12px 16px;
+          padding: 11px 16px;
           border: 0;
-          border-top: 1px solid var(--divider-color);
+          border-top: 1px solid var(--orchard-line);
+          border-left: 3px solid transparent;
           background: transparent;
           color: inherit;
           text-align: left;
           cursor: pointer;
+          font: inherit;
+        }
+        .item:hover {
+          background: var(--orchard-band);
         }
         .item[selected] {
-          background: var(--secondary-background-color);
+          border-left-color: var(--orchard-accent);
+          background: var(--orchard-accent-soft);
         }
-        ha-icon {
-          color: var(--state-icon-color);
+        .item ha-icon {
           width: 22px;
           height: 22px;
+          color: var(--state-icon-color);
         }
-        .badge {
-          border-radius: 999px;
-          padding: 3px 8px;
-          background: var(--secondary-background-color);
-          color: var(--secondary-text-color);
-          font-size: 12px;
+        .item strong,
+        .truncate {
+          overflow: hidden;
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
-        .grid {
-          display: grid;
-          grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
-          gap: 16px;
-        }
-        .panel {
-          padding: 18px;
+        .badge {
           min-width: 0;
+          max-width: 112px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          border-radius: 999px;
+          padding: 4px 8px;
+          background: var(--orchard-band);
+          color: var(--secondary-text-color);
+          font-size: 12px;
+        }
+        .badge.review {
+          background: rgba(37, 99, 235, 0.13);
+          color: var(--orchard-info);
+        }
+        .badge.ignored {
+          background: rgba(194, 65, 12, 0.12);
+          color: var(--orchard-danger);
+        }
+        .empty {
+          padding: 24px 16px;
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          text-align: center;
+        }
+        .masthead {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 16px;
+          align-items: end;
+          margin-bottom: 18px;
         }
         h1 {
-          margin: 0 0 4px;
+          margin: 0;
           font-size: 28px;
           line-height: 34px;
           letter-spacing: 0;
-        }
-        .brand {
-          margin-bottom: 20px;
-        }
-        .brand p {
-          margin: 3px 0 0;
-          color: var(--secondary-text-color);
-          font-size: 14px;
         }
         h2 {
           margin: 0 0 14px;
@@ -177,96 +248,299 @@ class OrchardPanel extends HTMLElement {
           line-height: 22px;
           letter-spacing: 0;
         }
-        .row {
-          display: grid;
-          grid-template-columns: 150px 1fr;
-          gap: 12px;
-          padding: 10px 0;
-          border-top: 1px solid var(--divider-color);
+        h3 {
+          margin: 0;
+          font-size: 14px;
+          line-height: 20px;
+          letter-spacing: 0;
         }
-        .chips {
+        .masthead p {
+          max-width: 620px;
+          margin: 4px 0 0;
+          color: var(--secondary-text-color);
+          font-size: 14px;
+          line-height: 20px;
+        }
+        .top {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(118px, 1fr));
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .metric,
+        .panel,
+        .bridge {
+          border: 1px solid var(--orchard-line);
+          border-radius: 8px;
+          background: var(--orchard-surface);
+        }
+        .metric {
+          min-height: 78px;
+          padding: 13px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .metric strong {
+          display: block;
+          font-size: 24px;
+          line-height: 28px;
+          letter-spacing: 0;
+        }
+        .metric span {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          text-transform: uppercase;
+        }
+        .bridge {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 16px;
+          align-items: center;
+          padding: 16px;
+          margin-bottom: 16px;
+        }
+        .bridge-main {
+          min-width: 0;
+        }
+        .bridge-title {
           display: flex;
           flex-wrap: wrap;
+          align-items: center;
           gap: 8px;
+          margin-bottom: 9px;
         }
-        .chip {
+        .status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 24px;
+          padding: 3px 9px;
           border-radius: 999px;
-          padding: 5px 9px;
-          background: var(--secondary-background-color);
+          background: var(--orchard-band);
+          color: var(--secondary-text-color);
+          font-size: 12px;
+        }
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: var(--secondary-text-color);
+        }
+        .status-dot.ready {
+          background: var(--orchard-accent);
+        }
+        .status-dot.warn {
+          background: var(--orchard-warn);
+        }
+        .bridge-facts {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 14px;
+          color: var(--secondary-text-color);
           font-size: 13px;
         }
+        .bridge-facts strong {
+          color: var(--primary-text-color);
+        }
+        .bridge-actions,
         .actions {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
-          margin-top: 14px;
+          align-items: center;
         }
-        button.action {
-          border: 1px solid var(--divider-color);
+        button.action,
+        a.action {
+          min-height: 38px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          border: 1px solid var(--orchard-line);
           border-radius: 6px;
-          padding: 9px 12px;
+          padding: 8px 12px;
           color: var(--primary-text-color);
-          background: var(--card-background-color);
+          background: var(--orchard-surface);
           cursor: pointer;
           font: inherit;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        button.action:hover,
+        a.action:hover {
+          background: var(--orchard-band);
         }
         button.primary {
           color: var(--text-primary-color);
           background: var(--primary-color);
           border-color: var(--primary-color);
         }
+        button.danger {
+          color: var(--orchard-danger);
+        }
+        button.action ha-icon,
+        a.action ha-icon {
+          width: 18px;
+          height: 18px;
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: minmax(320px, 1.1fr) minmax(320px, 0.9fr);
+          gap: 14px;
+          align-items: start;
+        }
+        .panel {
+          min-width: 0;
+          padding: 18px;
+        }
+        .panel-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+        .accessory-title {
+          min-width: 0;
+          display: grid;
+          grid-template-columns: 42px minmax(0, 1fr);
+          gap: 12px;
+          align-items: center;
+        }
+        .accessory-title ha-icon {
+          width: 30px;
+          height: 30px;
+          padding: 6px;
+          border-radius: 8px;
+          color: var(--orchard-accent);
+          background: var(--orchard-accent-soft);
+        }
+        .accessory-title h1 {
+          overflow-wrap: anywhere;
+        }
+        .rows {
+          border-top: 1px solid var(--orchard-line);
+        }
+        .row {
+          display: grid;
+          grid-template-columns: 142px minmax(0, 1fr);
+          gap: 12px;
+          padding: 11px 0;
+          border-bottom: 1px solid var(--orchard-line);
+        }
+        .row:last-child {
+          border-bottom: 0;
+        }
+        .chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 7px;
+        }
+        .chip {
+          min-height: 26px;
+          display: inline-flex;
+          align-items: center;
+          border-radius: 999px;
+          padding: 4px 9px;
+          background: var(--orchard-band);
+          font-size: 13px;
+        }
+        .form-grid {
+          display: grid;
+          gap: 11px;
+        }
         label {
-          display: block;
+          display: grid;
+          gap: 5px;
           color: var(--secondary-text-color);
           font-size: 13px;
-          margin: 12px 0 5px;
         }
-        input, select {
+        input,
+        select {
           width: 100%;
-          box-sizing: border-box;
-          border: 1px solid var(--divider-color);
+          min-height: 40px;
+          border: 1px solid var(--orchard-line);
           border-radius: 6px;
-          padding: 10px;
+          padding: 9px 10px;
           color: var(--primary-text-color);
-          background: var(--card-background-color);
+          background: var(--orchard-surface);
           font: inherit;
         }
-        .empty {
-          padding: 48px 24px;
-          text-align: center;
-          color: var(--secondary-text-color);
+        code {
+          display: inline-block;
+          max-width: 100%;
+          overflow: auto;
+          border-radius: 6px;
+          padding: 2px 6px;
+          background: var(--orchard-band);
+          color: var(--primary-text-color);
         }
-        @media (max-width: 900px) {
-          .shell, .grid {
+        .stack {
+          display: grid;
+          gap: 14px;
+        }
+        @media (max-width: 1100px) {
+          .shell {
+            grid-template-columns: 300px minmax(0, 1fr);
+          }
+          .top {
+            grid-template-columns: repeat(3, minmax(118px, 1fr));
+          }
+          .grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 760px) {
+          .shell {
             grid-template-columns: 1fr;
           }
           aside {
             border-right: 0;
-            border-bottom: 1px solid var(--divider-color);
-          }
-          .top {
-            grid-template-columns: repeat(2, minmax(120px, 1fr));
+            border-bottom: 1px solid var(--orchard-line);
           }
           main {
             padding: 16px;
+          }
+          .masthead,
+          .bridge {
+            grid-template-columns: 1fr;
+          }
+          .top {
+            grid-template-columns: repeat(2, minmax(118px, 1fr));
+          }
+          .row {
+            grid-template-columns: 1fr;
+            gap: 4px;
           }
         }
       </style>
       <div class="shell">
         <aside>
-          <div class="section-title">Awaiting Review</div>
-          ${changes.length ? changes.map((change) => this.renderChangeItem(change)).join("") : `<div class="empty">No pending reviews</div>`}
-          <div class="section-title">Accessories</div>
-          ${accessories.length ? accessories.map((item) => this.renderAccessoryItem(item)).join("") : `<div class="empty">No synced accessories</div>`}
-          <details open class="ignored-section">
-            <summary class="section-title">Ignored (${(this.state.ignored || []).length})</summary>
-            ${(this.state.ignored && this.state.ignored.length) ? this.state.ignored.map((item) => this.renderIgnoredItem(item)).join("") : `<div class="empty">No ignored accessories</div>`}
+          <div class="sidebar-head">
+            <img class="brand-mark" src="/api/brands/integration/orchard/icon.png" alt="">
+            <div>
+              <strong>Orchard</strong>
+              <span>The Apple Home experience Home Assistant deserves.</span>
+            </div>
+          </div>
+          ${this.renderSidebarSection("Awaiting Review", changes.length, changes, (change) => this.renderChangeItem(change))}
+          ${this.renderSidebarSection("Accessories", accessories.length, accessories, (item) => this.renderAccessoryItem(item))}
+          <details open>
+            <summary class="section-title"><span>Ignored</span><span class="count">${ignored.length}</span></summary>
+            ${ignored.length ? ignored.map((item) => this.renderIgnoredItem(item)).join("") : `<div class="empty">No ignored accessories</div>`}
           </details>
         </aside>
         <main>
-          <div class="brand">
-            <h1>Orchard</h1>
-            <p>The Apple Home experience Home Assistant deserves.</p>
+          <div class="masthead">
+            <div>
+              <h1>Orchard</h1>
+              <p>The Apple Home experience Home Assistant deserves.</p>
+            </div>
+            <div class="bridge-actions">
+              <button class="action" data-reconcile><ha-icon icon="mdi:refresh"></ha-icon>Reconcile</button>
+              <button class="action primary" data-sync-bridge><ha-icon icon="mdi:home-export-outline"></ha-icon>Sync Bridge</button>
+            </div>
           </div>
           <div class="top">
             ${this.metric("Status", this.state.status)}
@@ -276,22 +550,29 @@ class OrchardPanel extends HTMLElement {
             ${this.metric("Attention", this.state.needs_attention_count)}
           </div>
           ${this.renderBridge()}
-          ${accessory ? this.renderAccessory(accessory) : `<div class="panel empty">Compatible lights and scenes will appear here.</div>`}
+          ${accessory ? this.renderAccessory(accessory) : `<div class="panel empty">Compatible accessories will appear here.</div>`}
         </main>
       </div>
     `;
     this.bind();
   }
 
+  renderSidebarSection(title, count, items, renderer) {
+    return `
+      <div class="section-title"><span>${this.escape(title)}</span><span class="count">${this.escape(String(count))}</span></div>
+      ${items.length ? items.map((item) => renderer(item)).join("") : `<div class="empty">None</div>`}
+    `;
+  }
+
   metric(label, value) {
-    return `<div class="metric"><strong>${this.escape(String(value ?? "-"))}</strong><span>${label}</span></div>`;
+    return `<div class="metric"><strong>${this.escape(String(value ?? "-"))}</strong><span>${this.escape(label)}</span></div>`;
   }
 
   renderAccessoryItem(item) {
     return `
       <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
-        <span><strong>${this.escape(item.name)}</strong><br><span class="muted">${this.escape(item.room || "No Room")}</span></span>
+        <span><strong class="truncate">${this.escape(item.name)}</strong><br><span class="muted truncate">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">${this.escape(item.category)}</span>
       </button>
     `;
@@ -299,15 +580,26 @@ class OrchardPanel extends HTMLElement {
 
   renderBridge() {
     const bridge = this.state.homekit_bridge || {};
+    const managed = bridge.managed !== false;
+    const ready = managed && bridge.paired;
+    const status = bridge.status || "Not Created";
     return `
-      <section class="panel bridge">
-        <h2>Apple Home Bridge</h2>
-        <div class="row"><span class="muted">Status</span><strong>${this.escape(bridge.status || "Not Created")}</strong></div>
-        <div class="row"><span class="muted">Accessories</span><span>${this.escape(String(bridge.entity_count ?? 0))}</span></div>
-        <div class="row"><span class="muted">Paired</span><span>${bridge.paired ? "Yes" : "No"}</span></div>
-        ${bridge.pin_code ? `<div class="row"><span class="muted">PIN</span><code>${this.escape(bridge.pin_code)}</code></div>` : ""}
-        ${bridge.pairing_qr_url ? `<div class="row"><span class="muted">QR</span><a href="${this.escape(bridge.pairing_qr_url)}" target="_blank" rel="noreferrer">Open pairing QR</a></div>` : ""}
-        <div class="actions"><button class="action primary" data-sync-bridge>Sync Bridge</button></div>
+      <section class="bridge">
+        <div class="bridge-main">
+          <div class="bridge-title">
+            <h2>Apple Home Bridge</h2>
+            <span class="status-pill"><span class="status-dot ${ready ? "ready" : "warn"}"></span>${this.escape(status)}</span>
+          </div>
+          <div class="bridge-facts">
+            <span><strong>${this.escape(String(bridge.entity_count ?? 0))}</strong> accessories</span>
+            <span><strong>${bridge.paired ? "Paired" : "Not Paired"}</strong></span>
+            ${bridge.pin_code ? `<span>PIN <strong>${this.escape(bridge.pin_code)}</strong></span>` : ""}
+          </div>
+        </div>
+        <div class="bridge-actions">
+          ${bridge.pairing_qr_url ? `<a class="action" href="${this.escape(bridge.pairing_qr_url)}" target="_blank" rel="noreferrer"><ha-icon icon="mdi:qrcode"></ha-icon>Pair</a>` : ""}
+          <button class="action primary" data-sync-bridge><ha-icon icon="mdi:home-export-outline"></ha-icon>Sync Bridge</button>
+        </div>
       </section>
     `;
   }
@@ -317,8 +609,8 @@ class OrchardPanel extends HTMLElement {
     return `
       <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
-        <span><strong>${this.escape(item.name)}</strong><br><span class="muted">${this.escape(change.recommended)}</span></span>
-        <span class="badge">Review</span>
+        <span><strong class="truncate">${this.escape(item.name)}</strong><br><span class="muted truncate">${this.escape(change.recommended)}</span></span>
+        <span class="badge review">Review</span>
       </button>
     `;
   }
@@ -328,80 +620,161 @@ class OrchardPanel extends HTMLElement {
     return `
       <button type="button" class="item" data-select="${this.escape(id)}" ${id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="mdi:close-circle-outline"></ha-icon>
-        <span><strong>${this.escape(item.name || id)}</strong><br><span class="muted">${this.escape(item.room || "No Room")}</span></span>
-        <span class="badge">Ignored</span>
+        <span><strong class="truncate">${this.escape(item.name || id)}</strong><br><span class="muted truncate">${this.escape(item.room || "No Room")}</span></span>
+        <span class="badge ignored">Ignored</span>
       </button>
     `;
   }
 
   renderAccessory(item) {
     const change = (this.state.changes || []).find((candidate) => candidate.accessory.source_entity_id === item.source_entity_id);
-    const ignored = (this.state.ignored || []).find((i) => i.entity_id === item.source_entity_id);
+    const ignored = (this.state.ignored || []).find((candidate) => candidate.entity_id === item.source_entity_id);
     return `
       <div class="grid">
         <section class="panel">
-          <h1>${this.escape(item.name)}</h1>
-          <div class="muted">${this.escape(item.category)} / ${this.escape(item.room || "No Room")}</div>
-          ${change ? `<div class="actions"><button class="action primary" data-accept="${this.escape(item.source_entity_id)}">Add</button><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button></div>` : (ignored ? `<div class="actions"><button class="action primary" data-unignore="${this.escape(item.source_entity_id)}">Unignore</button></div>` : `<div class="actions"><button class="action" data-ignore="${this.escape(item.source_entity_id)}">Ignore</button><button class="action" data-remove="${this.escape(item.source_entity_id)}">Remove</button></div>`)}
-          <div class="row"><span class="muted">Appears as</span><strong>${this.escape(item.category)}</strong></div>
-          <div class="row"><span class="muted">Room</span><span>${this.escape(item.room || "No Room")}</span></div>
-          <div class="row"><span class="muted">Controls</span><div class="chips">${item.controls.map((control) => `<span class="chip">${this.escape(control)}</span>`).join("")}</div></div>
-          <div class="row"><span class="muted">Siri</span><span>${this.escape(item.siri_name || item.name)}</span></div>
+          <div class="panel-head">
+            <div class="accessory-title">
+              <ha-icon icon="${this.escape(item.icon || "mdi:home")}"></ha-icon>
+              <div>
+                <h1>${this.escape(item.name)}</h1>
+                <div class="muted">${this.escape(item.category)} / ${this.escape(item.room || "No Room")}</div>
+              </div>
+            </div>
+          </div>
+          ${this.renderAccessoryActions(item, change, ignored)}
+          <div class="rows">
+            <div class="row"><span class="muted">Appears as</span><strong>${this.escape(item.category)}</strong></div>
+            <div class="row"><span class="muted">Room</span><span>${this.escape(item.room || "No Room")}</span></div>
+            <div class="row"><span class="muted">Controls</span><div class="chips">${this.renderChips(item.controls)}</div></div>
+            <div class="row"><span class="muted">Siri</span><span>${this.escape(item.siri_name || item.name)}</span></div>
+          </div>
         </section>
-        <section class="panel">
-          <h2>Configuration</h2>
-          <label>Name</label>
-          <input data-field="name" value="${this.escape(item.name)}">
-          <label>Room</label>
-          <input data-field="room" value="${this.escape(item.room || "")}">
-          <label>Exposure</label>
-          <select data-field="exposure">
-            ${["individual", "grouped", "both", "hidden"].map((value) => `<option value="${value}" ${item.exposure === value ? "selected" : ""}>${value}</option>`).join("")}
-          </select>
-          <label>Siri Name</label>
-          <input data-field="siri_name" value="${this.escape(item.siri_name || item.name)}">
-          <div class="actions"><button class="action primary" data-save="${this.escape(item.source_entity_id)}">Save</button><button class="action" data-reconcile>Reconcile</button></div>
-        </section>
-        <section class="panel">
-          <h2>Why</h2>
-          <div class="row"><span class="muted">Mapped as</span><strong>${this.escape(item.explanation.mapped_as || item.category)}</strong></div>
-          <div class="row"><span class="muted">Reason</span><span>${this.escape(item.explanation.reason || "")}</span></div>
-          <div class="row"><span class="muted">Recommendation</span><span>${this.escape(item.explanation.recommendation || item.category)}</span></div>
-        </section>
-        <section class="panel">
-          <h2>Advanced</h2>
-          <div class="row"><span class="muted">Source</span><code>${this.escape(item.source_entity_id)}</code></div>
-          <div class="row"><span class="muted">Visible</span><span>${item.visible ? "Yes" : "No"}</span></div>
-          <div class="row"><span class="muted">State</span><span>${this.escape(item.state || "unknown")}</span></div>
-        </section>
+        <div class="stack">
+          ${ignored ? "" : this.renderConfiguration(item)}
+          ${this.renderWhy(item)}
+          ${this.renderAdvanced(item)}
+        </div>
       </div>
     `;
   }
 
+  renderAccessoryActions(item, change, ignored) {
+    if (change) {
+      return `
+        <div class="actions">
+          <button class="action primary" data-accept="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:plus-circle-outline"></ha-icon>Add</button>
+          <button class="action" data-ignore="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:eye-off-outline"></ha-icon>Ignore</button>
+        </div>
+      `;
+    }
+    if (ignored) {
+      return `
+        <div class="actions">
+          <button class="action primary" data-unignore="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:undo"></ha-icon>Unignore</button>
+        </div>
+      `;
+    }
+    return `
+      <div class="actions">
+        <button class="action" data-ignore="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:eye-off-outline"></ha-icon>Ignore</button>
+        <button class="action danger" data-remove="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:minus-circle-outline"></ha-icon>Remove</button>
+      </div>
+    `;
+  }
+
+  renderConfiguration(item) {
+    return `
+      <section class="panel">
+        <h2>Configuration</h2>
+        <div class="form-grid">
+          <label>Name<input data-field="name" value="${this.escape(item.name)}"></label>
+          <label>Room<input data-field="room" value="${this.escape(item.room || "")}"></label>
+          <label>Exposure
+            <select data-field="exposure">
+              ${["individual", "grouped", "both", "hidden"].map((value) => `<option value="${value}" ${item.exposure === value ? "selected" : ""}>${value}</option>`).join("")}
+            </select>
+          </label>
+          <label>Siri Name<input data-field="siri_name" value="${this.escape(item.siri_name || item.name)}"></label>
+        </div>
+        <div class="actions">
+          <button class="action primary" data-save="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:content-save-outline"></ha-icon>Save</button>
+        </div>
+      </section>
+    `;
+  }
+
+  renderWhy(item) {
+    const explanation = item.explanation || {};
+    return `
+      <section class="panel">
+        <h2>Why</h2>
+        <div class="rows">
+          <div class="row"><span class="muted">Mapped as</span><strong>${this.escape(explanation.mapped_as || item.category)}</strong></div>
+          <div class="row"><span class="muted">Reason</span><span>${this.escape(explanation.reason || "")}</span></div>
+          <div class="row"><span class="muted">Recommendation</span><span>${this.escape(explanation.recommendation || item.category)}</span></div>
+        </div>
+      </section>
+    `;
+  }
+
+  renderAdvanced(item) {
+    return `
+      <section class="panel">
+        <h2>Advanced</h2>
+        <div class="rows">
+          <div class="row"><span class="muted">Source</span><code>${this.escape(item.source_entity_id)}</code></div>
+          <div class="row"><span class="muted">Visible</span><span>${item.visible ? "Yes" : "No"}</span></div>
+          <div class="row"><span class="muted">State</span><span>${this.escape(item.state || "unknown")}</span></div>
+        </div>
+      </section>
+    `;
+  }
+
+  renderChips(items = []) {
+    if (!items.length) return `<span class="muted">None</span>`;
+    return items.map((control) => `<span class="chip">${this.escape(control)}</span>`).join("");
+  }
+
   bind() {
     this.shadowRoot.querySelectorAll("[data-select]").forEach((button) => {
-      button.addEventListener("click", (e) => {
-        e.stopPropagation();
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
         this.selectedId = button.dataset.select;
         this.render();
       });
     });
     this.shadowRoot.querySelectorAll("[data-accept]").forEach((button) => {
-      button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/change/${button.dataset.accept}/accept`); });
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.post(`orchard/change/${button.dataset.accept}/accept`);
+      });
     });
     this.shadowRoot.querySelectorAll("[data-ignore]").forEach((button) => {
-      button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/change/${button.dataset.ignore}/ignore`); });
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.post(`orchard/change/${button.dataset.ignore}/ignore`);
+      });
     });
     this.shadowRoot.querySelectorAll("[data-unignore]").forEach((button) => {
-      button.addEventListener("click", (e) => { e.stopPropagation(); this.post(`orchard/ignored/${button.dataset.unignore}/unignore`); });
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.post(`orchard/ignored/${button.dataset.unignore}/unignore`);
+      });
     });
     this.shadowRoot.querySelectorAll("[data-remove]").forEach((button) => {
-      button.addEventListener("click", (e) => { e.stopPropagation(); if (confirm("Ignore this accessory and remove it from Orchard-managed HomeKit (can be unignored)?")) { this.post(`orchard/change/${button.dataset.remove}/ignore`); } });
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (confirm("Ignore this accessory and remove it from Orchard-managed HomeKit?")) {
+          this.post(`orchard/change/${button.dataset.remove}/ignore`);
+        }
+      });
     });
-    const reconcile = this.shadowRoot.querySelector("[data-reconcile]");
-    if (reconcile) reconcile.addEventListener("click", () => this.post("orchard/reconcile"));
-    const syncBridge = this.shadowRoot.querySelector("[data-sync-bridge]");
-    if (syncBridge) syncBridge.addEventListener("click", () => this.post("orchard/bridge/sync"));
+    this.shadowRoot.querySelectorAll("[data-reconcile]").forEach((button) => {
+      button.addEventListener("click", () => this.post("orchard/reconcile"));
+    });
+    this.shadowRoot.querySelectorAll("[data-sync-bridge]").forEach((button) => {
+      button.addEventListener("click", () => this.post("orchard/bridge/sync"));
+    });
     const save = this.shadowRoot.querySelector("[data-save]");
     if (save) {
       save.addEventListener("click", () => {
