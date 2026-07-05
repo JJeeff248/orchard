@@ -31,6 +31,9 @@ def async_register_services(hass: HomeAssistant) -> None:
     async def unignore(call: ServiceCall) -> None:
         await _runtime(hass).async_unignore(call.data["entity_id"])
 
+    async def propose_accessory(call: ServiceCall) -> None:
+        await _runtime(hass).async_propose_accessory(call.data["entity_id"])
+
     async def sync_bridge(_call: ServiceCall) -> None:
         await _runtime(hass).async_sync_bridge()
 
@@ -52,6 +55,12 @@ def async_register_services(hass: HomeAssistant) -> None:
         DOMAIN,
         "unignore",
         unignore,
+        schema=vol.Schema({vol.Required("entity_id"): cv.entity_id}),
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "propose_accessory",
+        propose_accessory,
         schema=vol.Schema({vol.Required("entity_id"): cv.entity_id}),
     )
     hass.data[DOMAIN]["services_registered"] = True

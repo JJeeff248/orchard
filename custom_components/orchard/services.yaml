@@ -38,3 +38,14 @@ unignore:
       required: true
       selector:
         entity: {}
+
+propose_accessory:
+  name: Propose accessory
+  description: Manually add a supported Home Assistant entity to Orchard review.
+  fields:
+    entity_id:
+      name: Accessory
+      description: Source entity for the accessory.
+      required: true
+      selector:
+        entity: {}

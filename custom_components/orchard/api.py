@@ -100,6 +100,8 @@ class ChangeView(HomeAssistantView):
             await runtime.async_accept_change(entity_id)
         elif action == "ignore":
             await runtime.async_ignore(entity_id)
+        elif action == "propose":
+            await runtime.async_propose_accessory(entity_id)
         else:
             return self.json_message("Unknown action", status_code=400)
         return self.json(runtime.dashboard())

@@ -95,6 +95,25 @@ class OrchardRuntime:
         }
         await self._save_and_signal()
 
+    async def async_propose_accessory(self, entity_id: str, *, save: bool = True) -> None:
+        """Manually queue a supported entity for review."""
+        if entity_id in self.storage.data.accessories or entity_id in self.storage.data.ignored:
+            return
+        state = self.hass.states.get(entity_id)
+        if state is None or state.domain not in SUPPORTED_DOMAINS:
+            return
+        accessory = self.builder.build_accessory(state)
+        if accessory is None:
+            return
+        self.storage.data.changes[entity_id] = {
+            "kind": "new_accessory",
+            "message": f"{accessory.name} was added for review.",
+            "recommended": "Add",
+            "accessory": accessory.as_dict(),
+        }
+        if save:
+            await self._save_and_signal()
+
     async def async_sync_state(self, new_state: State, old_state: State | None = None) -> None:
         """Synchronize an entity state into the Apple model."""
         self._mark_known(new_state.entity_id)
@@ -252,8 +271,11 @@ class OrchardRuntime:
     async def async_unignore(self, entity_id: str) -> None:
         """Remove an entity from the ignored list and queue it for review."""
         self.storage.data.ignored.pop(entity_id, None)
-        # Re-add to review so it shows up in the panel
-        await self.async_review_entity(entity_id)
+        state = self.hass.states.get(entity_id)
+        if state is not None and self.builder.is_review_candidate(entity_id, state):
+            await self.async_review_entity(entity_id)
+        else:
+            await self.async_propose_accessory(entity_id, save=False)
         await self._save_and_signal()
 
     async def async_update_accessory(self, entity_id: str, updates: dict[str, Any]) -> None:
@@ -363,10 +385,37 @@ class OrchardRuntime:
             "accessories": accessories,
             "changes": awaiting,
             "ignored": ignored,
+            "available": self._available_accessories(),
             "homekit_bridge": self.storage.data.settings.get(
                 "homekit_bridge", homekit_status
             ),
         }
+
+    def _available_accessories(self) -> list[dict[str, Any]]:
+        """Return supported entities that can be added manually."""
+        taken = (
+            set(self.storage.data.accessories)
+            | set(self.storage.data.ignored)
+            | set(self.storage.data.changes)
+        )
+        available: list[dict[str, Any]] = []
+        for state in self.hass.states.async_all():
+            if state.domain not in SUPPORTED_DOMAINS or state.entity_id in taken:
+                continue
+            accessory = self.builder.build_accessory(state)
+            if accessory is None:
+                continue
+            available.append(
+                {
+                    "entity_id": state.entity_id,
+                    "name": accessory.name,
+                    "domain": state.domain,
+                    "category": accessory.category,
+                    "room": accessory.room,
+                }
+            )
+        available.sort(key=lambda item: (item["domain"], item["name"].lower(), item["entity_id"]))
+        return available
 
     def _capabilities_changed(self, old_state: State, new_state: State) -> bool:
         return old_state.attributes.get("supported_color_modes") != new_state.attributes.get(

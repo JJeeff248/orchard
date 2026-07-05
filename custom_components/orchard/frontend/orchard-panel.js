@@ -554,6 +554,19 @@ class OrchardPanel extends HTMLElement {
           display: grid;
           gap: 14px;
         }
+        .add-accessory-intro {
+          margin: 0 0 14px;
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          line-height: 20px;
+        }
+        select[data-available-entity] {
+          min-height: 168px;
+        }
+        select[data-available-entity] option[hidden],
+        select[data-available-entity] optgroup[hidden] {
+          display: none;
+        }
         @media (max-width: 1100px) {
           .shell {
             grid-template-columns: 300px minmax(0, 1fr);
@@ -638,7 +651,8 @@ class OrchardPanel extends HTMLElement {
             ${this.metric("Attention", this.state.needs_attention_count)}
           </div>
           ${this.renderBridge()}
-          ${accessory ? this.renderAccessory(accessory) : `<div class="panel empty">Compatible accessories will appear here.</div>`}
+          ${this.renderAddAccessory()}
+          ${accessory ? this.renderAccessory(accessory) : `<div class="panel empty">Select an accessory to preview it here.</div>`}
         </main>
       </div>
     `;
@@ -673,6 +687,47 @@ class OrchardPanel extends HTMLElement {
         <span class="item-body"><strong>${this.escape(item.name)}</strong><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">${this.escape(item.category)}</span>
       </button>
+    `;
+  }
+
+  renderAddAccessory() {
+    const available = this.state.available || [];
+    if (!available.length) {
+      return `
+        <section class="panel add-accessory">
+          <h2>Add Accessory</h2>
+          <p class="add-accessory-intro">Manually add sensors, switches, and other supported entities that Orchard no longer surfaces automatically.</p>
+          <div class="empty">No additional compatible entities available.</div>
+        </section>
+      `;
+    }
+
+    const groups = {};
+    for (const item of available) {
+      groups[item.domain] = groups[item.domain] || [];
+      groups[item.domain].push(item);
+    }
+
+    const options = Object.keys(groups).sort().map((domain) => `
+      <optgroup label="${this.escape(domain)}">
+        ${groups[domain].map((item) => `
+          <option value="${this.escape(item.entity_id)}">${this.escape(item.name)}${item.room ? ` · ${this.escape(item.room)}` : ""}</option>
+        `).join("")}
+      </optgroup>
+    `).join("");
+
+    return `
+      <section class="panel add-accessory">
+        <h2>Add Accessory</h2>
+        <p class="add-accessory-intro">Manually add sensors, switches, and other supported entities that Orchard no longer surfaces automatically.</p>
+        <div class="form-grid">
+          <label>Search<input type="search" data-available-filter placeholder="Filter by name or entity id"></label>
+          <label>Entity<select data-available-entity>${options}</select></label>
+        </div>
+        <div class="actions">
+          <button class="action primary" data-propose><ha-icon icon="mdi:plus-circle-outline"></ha-icon>Add to Review</button>
+        </div>
+      </section>
     `;
   }
 
@@ -872,6 +927,30 @@ class OrchardPanel extends HTMLElement {
     });
     this.shadowRoot.querySelectorAll("[data-sync-bridge]").forEach((button) => {
       button.addEventListener("click", () => this.post("orchard/bridge/sync"));
+    });
+    const filter = this.shadowRoot.querySelector("[data-available-filter]");
+    const availableSelect = this.shadowRoot.querySelector("[data-available-entity]");
+    if (filter && availableSelect) {
+      filter.addEventListener("input", () => {
+        const query = filter.value.trim().toLowerCase();
+        availableSelect.querySelectorAll("option").forEach((option) => {
+          const haystack = `${option.textContent} ${option.value}`.toLowerCase();
+          option.hidden = Boolean(query) && !haystack.includes(query);
+        });
+        availableSelect.querySelectorAll("optgroup").forEach((group) => {
+          group.hidden = !group.querySelector("option:not([hidden])");
+        });
+      });
+    }
+    this.shadowRoot.querySelectorAll("[data-propose]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const select = this.shadowRoot.querySelector("[data-available-entity]");
+        const entityId = select?.value;
+        if (!entityId) return;
+        this.selectedId = entityId;
+        this.sectionState.review = true;
+        this.post(`orchard/change/${entityId}/propose`);
+      });
     });
     const save = this.shadowRoot.querySelector("[data-save]");
     if (save) {
