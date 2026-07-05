@@ -5,11 +5,10 @@ from __future__ import annotations
 DOMAIN = "orchard"
 NAME = "Orchard"
 TAGLINE = "The Apple Home experience Home Assistant deserves."
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 
 PANEL_URL = "/orchard"
 PANEL_TITLE = "Orchard"
-# Serve the app icon from the integration API so we can use a custom image
 PANEL_ICON = "mdi:tree"
 
 STORAGE_KEY = f"{DOMAIN}.store"

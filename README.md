@@ -2,7 +2,7 @@
 
 The Apple Home experience Home Assistant deserves.
 
-Orchard is a HACS custom integration that builds an Apple-first presentation model on top of Home Assistant lights and scenes.
+Orchard is a HACS custom integration that builds an Apple-first presentation model on top of Home Assistant accessories.
 
 It discovers compatible entities, explains each mapping, keeps a versioned `.storage` configuration, exposes a Home Assistant panel, and provides service/API controls for review and reconciliation.
 
@@ -18,7 +18,7 @@ This is an early runtime implementation for the PRD in `PRD.md`. It includes:
 - Orchard-managed Apple Home bridge sync
 - Health dashboard
 - Preview and explanation views
-- Services for reconcile, bridge sync, accept, and ignore
+- Services for reconcile, bridge sync, accept, ignore, and unignore
 - Rust model crate scaffold for long-term runtime core work
 
 ## Install
@@ -36,7 +36,7 @@ Or install as a custom HACS repository, then restart Home Assistant.
 1. Go to **Settings > Devices & services > Add integration**.
 2. Add **Orchard**.
 3. Open **Orchard** in the sidebar.
-4. Review detected lights and scenes.
+4. Review detected accessories.
 5. Click **Sync Bridge**.
 6. Open the pairing QR or use the PIN in Apple Home.
 
@@ -46,3 +46,4 @@ Or install as a custom HACS repository, then restart Home Assistant.
 - `orchard.sync_bridge`
 - `orchard.accept_change`
 - `orchard.ignore`
+- `orchard.unignore`

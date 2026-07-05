@@ -27,3 +27,14 @@ ignore:
       required: true
       selector:
         entity: {}
+
+unignore:
+  name: Unignore accessory
+  description: Return an ignored accessory to Orchard review.
+  fields:
+    entity_id:
+      name: Accessory
+      description: Source entity for the accessory.
+      required: true
+      selector:
+        entity: {}

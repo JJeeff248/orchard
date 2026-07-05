@@ -177,21 +177,6 @@ class OrchardRuntime:
         await self.async_review_entity(entity_id)
         await self._save_and_signal()
 
-    async def async_remove_accessory(self, entity_id: str) -> None:
-        """Permanently remove an accessory from Orchard's storage.
-
-        This deletes the accessory from the persisted accessories list and
-        triggers a bridge sync so HomeKit stops exposing it.
-        """
-        # Remove from all persisted structures
-        self.storage.data.accessories.pop(entity_id, None)
-        self.storage.data.changes.pop(entity_id, None)
-        self.storage.data.ignored.pop(entity_id, None)
-
-        # Update the managed bridge and persist
-        await self.async_sync_bridge(save=False)
-        await self._save_and_signal()
-
     async def async_update_accessory(self, entity_id: str, updates: dict[str, Any]) -> None:
         """Update user-facing accessory configuration."""
         accessory = self.storage.data.accessories.get(entity_id)

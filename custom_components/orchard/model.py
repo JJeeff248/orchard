@@ -220,7 +220,6 @@ class AppleModelBuilder:
         }
 
     def _build_switch(self, state: State) -> AppleAccessory:
-        attrs = state.attributes
         controls = ["Power"]
         capabilities = {"on_off": True}
 

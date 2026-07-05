@@ -14,7 +14,6 @@ from .const import DOMAIN
 from .runtime import OrchardRuntime
 
 PANEL_PATH = Path(__file__).parent / "frontend" / "orchard-panel.js"
-ICON_PATH = Path(__file__).parent / "frontend" / "OrchardIcon.png"
 
 
 def runtime_for(hass: HomeAssistant) -> OrchardRuntime:
@@ -27,7 +26,6 @@ def async_register_api(hass: HomeAssistant) -> None:
     if hass.data[DOMAIN].get("api_registered"):
         return
     hass.http.register_view(FrontendAssetView)
-    hass.http.register_view(IconAssetView)
     hass.http.register_view(DashboardView)
     hass.http.register_view(AccessoryView)
     hass.http.register_view(ChangeView)
@@ -50,20 +48,6 @@ class FrontendAssetView(HomeAssistantView):
             text=PANEL_PATH.read_text(encoding="utf-8"),
             content_type="text/javascript",
         )
-
-
-class IconAssetView(HomeAssistantView):
-    """Serve the panel icon image."""
-
-    url = f"/api/{DOMAIN}/icon.png"
-    name = f"api:{DOMAIN}:icon"
-    requires_auth = False
-
-    async def get(self, _request):
-        """Return PNG icon if present."""
-        if not ICON_PATH.exists():
-            return web.Response(status=404)
-        return web.FileResponse(path=str(ICON_PATH))
 
 
 class DashboardView(HomeAssistantView):
@@ -159,17 +143,4 @@ class UnignoreView(HomeAssistantView):
     async def post(self, request, entity_id: str):
         runtime = runtime_for(request.app[KEY_HASS])
         await runtime.async_unignore(entity_id)
-        return self.json(runtime.dashboard())
-
-
-class RemoveAccessoryView(HomeAssistantView):
-    """Endpoint to permanently remove an accessory."""
-
-    url = f"/api/{DOMAIN}/accessory/{{entity_id}}/delete"
-    name = f"api:{DOMAIN}:accessory:delete"
-
-    async def post(self, request, entity_id: str):
-        runtime = runtime_for(request.app[KEY_HASS])
-        # Do not permanently delete via API; move to ignored list instead
-        await runtime.async_ignore(entity_id)
         return self.json(runtime.dashboard())
