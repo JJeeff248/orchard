@@ -181,7 +181,7 @@ class OrchardPanel extends HTMLElement {
           display: grid;
           grid-template-columns: 34px minmax(0, 1fr) auto;
           gap: 10px;
-          align-items: center;
+          align-items: start;
           padding: 11px 16px;
           border: 0;
           border-top: 1px solid var(--orchard-line);
@@ -202,13 +202,38 @@ class OrchardPanel extends HTMLElement {
         .item ha-icon {
           width: 22px;
           height: 22px;
+          margin-top: 1px;
           color: var(--state-icon-color);
         }
-        .item strong,
+        .item-body {
+          min-width: 0;
+          display: grid;
+          gap: 2px;
+        }
+        .item-body strong,
+        .item-body .muted {
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          line-height: 1.35;
+        }
+        .item-body strong {
+          display: block;
+        }
+        .item > .badge {
+          align-self: center;
+          flex-shrink: 0;
+          white-space: nowrap;
+        }
         .truncate {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+        .item-body strong,
+        .item-body .muted {
+          overflow: visible;
+          text-overflow: unset;
+          white-space: normal;
         }
         .badge {
           min-width: 0;
@@ -618,7 +643,7 @@ class OrchardPanel extends HTMLElement {
     return `
       <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
-        <span><strong class="truncate">${this.escape(item.name)}</strong><br><span class="muted truncate">${this.escape(item.room || "No Room")}</span></span>
+        <span class="item-body"><strong>${this.escape(item.name)}</strong><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">${this.escape(item.category)}</span>
       </button>
     `;
@@ -655,7 +680,7 @@ class OrchardPanel extends HTMLElement {
     return `
       <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
-        <span><strong class="truncate">${this.escape(item.name)}</strong><br><span class="muted truncate">${this.escape(change.recommended)}</span></span>
+        <span class="item-body"><strong>${this.escape(item.name)}</strong><span class="muted">${this.escape(change.message || change.recommended)}</span></span>
         <span class="badge review">Review</span>
       </button>
     `;
@@ -666,7 +691,7 @@ class OrchardPanel extends HTMLElement {
     return `
       <button type="button" class="item" data-select="${this.escape(id)}" ${id === this.selectedId ? "selected" : ""}>
         <ha-icon icon="mdi:close-circle-outline"></ha-icon>
-        <span><strong class="truncate">${this.escape(item.name || id)}</strong><br><span class="muted truncate">${this.escape(item.room || "No Room")}</span></span>
+        <span class="item-body"><strong>${this.escape(item.name || id)}</strong><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge ignored">Ignored</span>
       </button>
     `;
