@@ -22,8 +22,10 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import EntityCategory
 
 SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock", "media_player", "vacuum"}
+DISCOVERY_DOMAINS = frozenset({"light", "scene", "cover", "climate", "lock", "media_player", "vacuum"})
 
 
 @dataclass(slots=True)
@@ -72,6 +74,20 @@ class AppleModelBuilder:
 
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
+
+    def is_review_candidate(self, entity_id: str, state: State) -> bool:
+        """Return whether an entity should surface in Orchard review."""
+        if state.domain not in DISCOVERY_DOMAINS:
+            return False
+
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is not None:
+            if entry.disabled_by is not None or entry.hidden_by is not None:
+                return False
+            if entry.entity_category in {EntityCategory.DIAGNOSTIC, EntityCategory.CONFIG}:
+                return False
+
+        return True
 
     def build_accessory(self, state: State, custom: dict[str, Any] | None = None) -> AppleAccessory | None:
         """Build an Apple accessory from a Home Assistant state."""

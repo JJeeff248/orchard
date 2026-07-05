@@ -82,7 +82,7 @@ class OrchardRuntime:
         if entity_id in self.storage.data.accessories or entity_id in self.storage.data.ignored:
             return
         state = self.hass.states.get(entity_id)
-        if state is None:
+        if state is None or not self.builder.is_review_candidate(entity_id, state):
             return
         accessory = self.builder.build_accessory(state)
         if accessory is None:
@@ -97,9 +97,15 @@ class OrchardRuntime:
 
     async def async_sync_state(self, new_state: State, old_state: State | None = None) -> None:
         """Synchronize an entity state into the Apple model."""
+        self._mark_known(new_state.entity_id)
         existing = self.storage.data.accessories.get(new_state.entity_id)
         if existing is None:
-            if self.entry.data.get("auto_discover", True):
+            if (
+                self.entry.data.get("auto_discover", True)
+                and self.storage.data.bootstrapped
+                and old_state is None
+                and self.builder.is_review_candidate(new_state.entity_id, new_state)
+            ):
                 await self.async_review_entity(new_state.entity_id)
             return
 
@@ -121,15 +127,18 @@ class OrchardRuntime:
 
     async def async_reconcile(self) -> None:
         """Rebuild the model and repair missed events."""
+        self._prune_review_queue()
+        await self._async_bootstrap()
+        self._seed_known_entities()
+
         seen: set[str] = set()
-        for entity_id in list(self.storage.data.changes):
-            if entity_id in self.storage.data.accessories or entity_id in self.storage.data.ignored:
-                self.storage.data.changes.pop(entity_id, None)
+        known_entities = set(self.storage.data.known_entities)
 
         for state in self.hass.states.async_all():
             if state.domain not in SUPPORTED_DOMAINS:
                 continue
             seen.add(state.entity_id)
+            self._mark_known(state.entity_id)
             if state.entity_id in self.storage.data.ignored:
                 continue
             if state.entity_id in self.storage.data.accessories:
@@ -139,7 +148,12 @@ class OrchardRuntime:
                 )
                 if accessory is not None:
                     self.storage.data.accessories[state.entity_id] = accessory.as_dict()
-            elif self.entry.data.get("auto_discover", True):
+            elif (
+                self.entry.data.get("auto_discover", True)
+                and self.storage.data.bootstrapped
+                and state.entity_id not in known_entities
+                and self.builder.is_review_candidate(state.entity_id, state)
+            ):
                 await self.async_review_entity(state.entity_id)
 
         for entity_id in list(self.storage.data.accessories):
@@ -150,6 +164,67 @@ class OrchardRuntime:
 
         self.last_sync = dt_util.utcnow().isoformat()
         await self._save_and_signal()
+
+    async def _async_bootstrap(self) -> None:
+        """Auto-accept opinionated defaults for existing accessories on first run."""
+        if self.storage.data.bootstrapped:
+            return
+
+        if self.storage.data.accessories:
+            self.storage.data.bootstrapped = True
+            return
+
+        if not self.entry.data.get("auto_discover", True):
+            self.storage.data.bootstrapped = True
+            return
+
+        added = False
+        for state in self.hass.states.async_all():
+            if state.domain not in SUPPORTED_DOMAINS:
+                continue
+            if state.entity_id in self.storage.data.ignored:
+                continue
+            if not self.builder.is_review_candidate(state.entity_id, state):
+                continue
+            accessory = self.builder.build_accessory(state)
+            if accessory is None:
+                continue
+            self.storage.data.accessories[state.entity_id] = accessory.as_dict()
+            added = True
+
+        self.storage.data.bootstrapped = True
+        if added:
+            await self.async_sync_bridge(save=False)
+
+    def _seed_known_entities(self) -> None:
+        """Record the current Home Assistant entity set without queueing review."""
+        if self.storage.data.known_entities:
+            return
+        for state in self.hass.states.async_all():
+            self._mark_known(state.entity_id)
+
+    def _prune_review_queue(self) -> None:
+        """Drop review items that no longer need human attention."""
+        for entity_id in list(self.storage.data.changes):
+            if entity_id in self.storage.data.accessories or entity_id in self.storage.data.ignored:
+                self.storage.data.changes.pop(entity_id, None)
+                continue
+
+            change = self.storage.data.changes[entity_id]
+            if change.get("kind", "new_accessory") != "new_accessory":
+                continue
+
+            state = self.hass.states.get(entity_id)
+            if state is None or not self.builder.is_review_candidate(entity_id, state):
+                self.storage.data.changes.pop(entity_id, None)
+
+    def _mark_known(self, entity_id: str) -> None:
+        """Track entities Orchard has already seen."""
+        known = set(self.storage.data.known_entities)
+        if entity_id in known:
+            return
+        known.add(entity_id)
+        self.storage.data.known_entities = sorted(known)
 
     async def async_accept_change(self, entity_id: str) -> None:
         """Accept a pending review item."""

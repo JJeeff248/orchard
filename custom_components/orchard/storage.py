@@ -19,17 +19,22 @@ class RuntimeStore:
     ignored: dict[str, dict[str, Any]] = field(default_factory=dict)
     changes: dict[str, dict[str, Any]] = field(default_factory=dict)
     settings: dict[str, Any] = field(default_factory=dict)
+    bootstrapped: bool = False
+    known_entities: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> RuntimeStore:
         """Create a runtime store from raw data."""
         if not data:
             return cls()
+        accessories = dict(data.get("accessories", {}))
         return cls(
-            accessories=dict(data.get("accessories", {})),
+            accessories=accessories,
             ignored=dict(data.get("ignored", {})),
             changes=dict(data.get("changes", {})),
             settings=dict(data.get("settings", {})),
+            bootstrapped=bool(data.get("bootstrapped", accessories)),
+            known_entities=list(data.get("known_entities", [])),
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -39,6 +44,8 @@ class RuntimeStore:
             "ignored": self.ignored,
             "changes": self.changes,
             "settings": self.settings,
+            "bootstrapped": self.bootstrapped,
+            "known_entities": self.known_entities,
         }
 
 
