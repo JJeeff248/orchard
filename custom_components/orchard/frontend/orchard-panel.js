@@ -290,6 +290,17 @@ class OrchardPanel extends HTMLElement {
           align-items: end;
           margin-bottom: 18px;
         }
+        .masthead-title {
+          min-width: 0;
+          display: grid;
+          grid-template-columns: 56px minmax(0, 1fr);
+          gap: 14px;
+          align-items: center;
+        }
+        .masthead-title .brand-mark {
+          width: 56px;
+          height: 56px;
+        }
         h1 {
           margin: 0;
           font-size: 28px;
@@ -636,9 +647,12 @@ class OrchardPanel extends HTMLElement {
         </aside>
         <main>
           <div class="masthead">
-            <div>
-              <h1>Orchard</h1>
-              <p>The Apple Home experience Home Assistant deserves.</p>
+            <div class="masthead-title">
+              <span class="brand-mark"><img src="/api/orchard/brand/icon.png" alt=""></span>
+              <div>
+                <h1>Orchard</h1>
+                <p>The Apple Home experience Home Assistant deserves.</p>
+              </div>
             </div>
             <div class="bridge-actions">
               <button class="action" data-reconcile><ha-icon icon="mdi:refresh"></ha-icon>Reconcile</button>
