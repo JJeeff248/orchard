@@ -3,7 +3,7 @@ class OrchardPanel extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this.state = null;
     this.selectedId = null;
-    this.sectionState = { review: true, accessories: true, ignored: false };
+    this.sectionState = { review: true, accessories: true, ignored: false, addAccessory: false };
     this.load();
     this._unsub = this.hass.connection.subscribeEvents(() => this.load(), "orchard_updated");
   }
@@ -293,18 +293,18 @@ class OrchardPanel extends HTMLElement {
         .masthead-title {
           min-width: 0;
           display: grid;
-          grid-template-columns: 56px minmax(0, 1fr);
-          gap: 14px;
+          grid-template-columns: 44px minmax(0, 1fr);
+          gap: 12px;
           align-items: center;
         }
         .masthead-title .brand-mark {
-          width: 56px;
-          height: 56px;
+          width: 44px;
+          height: 44px;
         }
         h1 {
           margin: 0;
-          font-size: 28px;
-          line-height: 34px;
+          font-size: 24px;
+          line-height: 30px;
           letter-spacing: 0;
         }
         h2 {
@@ -567,14 +567,44 @@ class OrchardPanel extends HTMLElement {
           display: grid;
           gap: 14px;
         }
-        .add-accessory-intro {
-          margin: 0 0 14px;
-          color: var(--secondary-text-color);
-          font-size: 13px;
+        .add-accessory {
+          margin-top: 14px;
+          padding: 14px 16px;
+        }
+        .add-accessory > summary {
+          cursor: pointer;
+          list-style: none;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 0;
+        }
+        .add-accessory > summary::-webkit-details-marker {
+          display: none;
+        }
+        .add-accessory[open] > summary {
+          margin-bottom: 10px;
+        }
+        .add-accessory > summary h2 {
+          margin: 0;
+          font-size: 15px;
           line-height: 20px;
         }
-        select[data-available-entity] {
-          min-height: 168px;
+        .add-accessory-intro {
+          margin: 0 0 12px;
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          line-height: 18px;
+        }
+        .add-accessory-form {
+          display: grid;
+          grid-template-columns: minmax(160px, 0.9fr) minmax(200px, 1.2fr) auto;
+          gap: 10px;
+          align-items: end;
+        }
+        .add-accessory-form .action {
+          margin-bottom: 0;
         }
         select[data-available-entity] option[hidden],
         select[data-available-entity] optgroup[hidden] {
@@ -630,6 +660,9 @@ class OrchardPanel extends HTMLElement {
           .panel-head + .actions {
             margin-left: 0;
           }
+          .add-accessory-form {
+            grid-template-columns: 1fr;
+          }
         }
       </style>
       <div class="shell">
@@ -667,8 +700,8 @@ class OrchardPanel extends HTMLElement {
             ${this.metric("Attention", this.state.needs_attention_count)}
           </div>
           ${this.renderBridge()}
-          ${this.renderAddAccessory()}
           ${accessory ? this.renderAccessory(accessory) : `<div class="panel empty">Select an accessory to preview it here.</div>`}
+          ${this.renderAddAccessory()}
         </main>
       </div>
     `;
@@ -708,13 +741,14 @@ class OrchardPanel extends HTMLElement {
 
   renderAddAccessory() {
     const available = this.state.available || [];
+    const open = this.sectionState.addAccessory ?? false;
     if (!available.length) {
       return `
-        <section class="panel add-accessory">
-          <h2>Add Accessory</h2>
+        <details class="panel add-accessory" data-section="addAccessory" ${open ? "open" : ""}>
+          <summary><h2>Add Accessory</h2></summary>
           <p class="add-accessory-intro">Manually add sensors, switches, and other supported entities that Orchard no longer surfaces automatically.</p>
           <div class="empty">No additional compatible entities available.</div>
-        </section>
+        </details>
       `;
     }
 
@@ -733,17 +767,18 @@ class OrchardPanel extends HTMLElement {
     `).join("");
 
     return `
-      <section class="panel add-accessory">
-        <h2>Add Accessory</h2>
+      <details class="panel add-accessory" data-section="addAccessory" ${open ? "open" : ""}>
+        <summary>
+          <h2>Add Accessory</h2>
+          <span class="count">${this.escape(String(available.length))}</span>
+        </summary>
         <p class="add-accessory-intro">Manually add sensors, switches, and other supported entities that Orchard no longer surfaces automatically.</p>
-        <div class="form-grid">
+        <div class="add-accessory-form">
           <label>Search<input type="search" data-available-filter placeholder="Filter by name or entity id"></label>
           <label>Entity<select data-available-entity>${options}</select></label>
-        </div>
-        <div class="actions">
           <button class="action primary" data-propose><ha-icon icon="mdi:plus-circle-outline"></ha-icon>Add to Review</button>
         </div>
-      </section>
+      </details>
     `;
   }
 
