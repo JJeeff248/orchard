@@ -284,22 +284,9 @@ class OrchardPanel extends HTMLElement {
           text-align: center;
         }
         .masthead {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 16px;
-          align-items: end;
-          margin-bottom: 18px;
-        }
-        .masthead-title {
-          min-width: 0;
-          display: grid;
-          grid-template-columns: 44px minmax(0, 1fr);
-          gap: 12px;
-          align-items: center;
-        }
-        .masthead-title .brand-mark {
-          width: 44px;
-          height: 44px;
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 14px;
         }
         h1 {
           margin: 0;
@@ -318,13 +305,6 @@ class OrchardPanel extends HTMLElement {
           font-size: 14px;
           line-height: 20px;
           letter-spacing: 0;
-        }
-        .masthead p {
-          max-width: 620px;
-          margin: 4px 0 0;
-          color: var(--secondary-text-color);
-          font-size: 14px;
-          line-height: 20px;
         }
         .top {
           display: grid;
@@ -632,7 +612,6 @@ class OrchardPanel extends HTMLElement {
           main {
             padding: 16px;
           }
-          .masthead,
           .bridge {
             grid-template-columns: 1fr;
           }
@@ -680,13 +659,6 @@ class OrchardPanel extends HTMLElement {
         </aside>
         <main>
           <div class="masthead">
-            <div class="masthead-title">
-              <span class="brand-mark"><img src="/api/orchard/brand/icon.png" alt=""></span>
-              <div>
-                <h1>Orchard</h1>
-                <p>The Apple Home experience Home Assistant deserves.</p>
-              </div>
-            </div>
             <div class="bridge-actions">
               <button class="action" data-reconcile><ha-icon icon="mdi:refresh"></ha-icon>Reconcile</button>
               <button class="action primary" data-sync-bridge><ha-icon icon="mdi:home-export-outline"></ha-icon>Sync Bridge</button>
