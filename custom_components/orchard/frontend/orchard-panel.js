@@ -221,10 +221,19 @@ class OrchardPanel extends HTMLElement {
           border-left-color: var(--orchard-accent);
           background: var(--orchard-accent-soft);
         }
-        .item ha-icon {
+        .item-icon {
           width: 22px;
           height: 22px;
           margin-top: 1px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .item-icon ha-icon {
+          width: 22px;
+          height: 22px;
+          --mdc-icon-size: 22px;
           color: var(--state-icon-color);
         }
         .item-body {
@@ -397,18 +406,22 @@ class OrchardPanel extends HTMLElement {
         }
         button.action,
         a.action {
+          box-sizing: border-box;
+          height: 38px;
           min-height: 38px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
+          gap: 8px;
           border: 1px solid var(--orchard-line);
           border-radius: 6px;
-          padding: 8px 12px;
+          padding: 0 12px;
           color: var(--primary-text-color);
           background: var(--orchard-surface);
           cursor: pointer;
           font: inherit;
+          font-size: 14px;
+          line-height: 1;
           text-decoration: none;
           white-space: nowrap;
         }
@@ -424,10 +437,18 @@ class OrchardPanel extends HTMLElement {
         button.danger {
           color: var(--orchard-danger);
         }
-        button.action ha-icon,
-        a.action ha-icon {
+        .action-icon {
           width: 18px;
           height: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .action-icon ha-icon {
+          width: 18px;
+          height: 18px;
+          --mdc-icon-size: 18px;
         }
         .grid {
           display: grid;
@@ -581,10 +602,11 @@ class OrchardPanel extends HTMLElement {
           display: grid;
           grid-template-columns: minmax(160px, 0.9fr) minmax(200px, 1.2fr) auto;
           gap: 10px;
-          align-items: end;
+          align-items: center;
         }
         .add-accessory-form .action {
-          margin-bottom: 0;
+          height: 40px;
+          min-height: 40px;
         }
         select[data-available-entity] option[hidden],
         select[data-available-entity] optgroup[hidden] {
@@ -660,8 +682,8 @@ class OrchardPanel extends HTMLElement {
         <main>
           <div class="masthead">
             <div class="bridge-actions">
-              <button class="action" data-reconcile><ha-icon icon="mdi:refresh"></ha-icon>Reconcile</button>
-              <button class="action primary" data-sync-bridge><ha-icon icon="mdi:home-export-outline"></ha-icon>Sync Bridge</button>
+              <button class="action" data-reconcile>${this.actionIcon("mdi:refresh")}Reconcile</button>
+              <button class="action primary" data-sync-bridge>${this.actionIcon("mdi:home-export-outline")}Sync Bridge</button>
             </div>
           </div>
           <div class="top">
@@ -704,7 +726,7 @@ class OrchardPanel extends HTMLElement {
   renderAccessoryItem(item) {
     return `
       <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
-        <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
+        ${this.itemIcon(item.icon)}
         <span class="item-body"><strong>${this.escape(item.name)}</strong><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge">${this.escape(item.category)}</span>
       </button>
@@ -748,7 +770,7 @@ class OrchardPanel extends HTMLElement {
         <div class="add-accessory-form">
           <label>Search<input type="search" data-available-filter placeholder="Filter by name or entity id"></label>
           <label>Entity<select data-available-entity>${options}</select></label>
-          <button class="action primary" data-propose><ha-icon icon="mdi:plus-circle-outline"></ha-icon>Add to Review</button>
+          <button class="action primary" data-propose>${this.actionIcon("mdi:plus-circle-outline")}Add to Review</button>
         </div>
       </details>
     `;
@@ -773,8 +795,8 @@ class OrchardPanel extends HTMLElement {
           </div>
         </div>
         <div class="bridge-actions">
-          ${bridge.pairing_qr_url ? `<a class="action" href="${this.escape(bridge.pairing_qr_url)}" target="_blank" rel="noreferrer"><ha-icon icon="mdi:qrcode"></ha-icon>Pair</a>` : ""}
-          <button class="action primary" data-sync-bridge><ha-icon icon="mdi:home-export-outline"></ha-icon>Sync Bridge</button>
+          ${bridge.pairing_qr_url ? `<a class="action" href="${this.escape(bridge.pairing_qr_url)}" target="_blank" rel="noreferrer">${this.actionIcon("mdi:qrcode")}Pair</a>` : ""}
+          <button class="action primary" data-sync-bridge>${this.actionIcon("mdi:home-export-outline")}Sync Bridge</button>
         </div>
       </section>
     `;
@@ -784,7 +806,7 @@ class OrchardPanel extends HTMLElement {
     const item = change.accessory;
     return `
       <button type="button" class="item" data-select="${this.escape(item.source_entity_id)}" ${item.source_entity_id === this.selectedId ? "selected" : ""}>
-        <ha-icon icon="${this.escape(item.icon)}"></ha-icon>
+        ${this.itemIcon(item.icon)}
         <span class="item-body"><strong>${this.escape(item.name)}</strong><span class="muted">${this.escape(change.message || change.recommended)}</span></span>
         <span class="badge review">Review</span>
       </button>
@@ -795,7 +817,7 @@ class OrchardPanel extends HTMLElement {
     const id = item.source_entity_id || item.entity_id;
     return `
       <button type="button" class="item" data-select="${this.escape(id)}" ${id === this.selectedId ? "selected" : ""}>
-        <ha-icon icon="mdi:close-circle-outline"></ha-icon>
+        ${this.itemIcon("mdi:close-circle-outline")}
         <span class="item-body"><strong>${this.escape(item.name || id)}</strong><span class="muted">${this.escape(item.room || "No Room")}</span></span>
         <span class="badge ignored">Ignored</span>
       </button>
@@ -838,22 +860,22 @@ class OrchardPanel extends HTMLElement {
     if (change) {
       return `
         <div class="actions">
-          <button class="action primary" data-accept="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:plus-circle-outline"></ha-icon>Add</button>
-          <button class="action" data-ignore="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:eye-off-outline"></ha-icon>Ignore</button>
+          <button class="action primary" data-accept="${this.escape(item.source_entity_id)}">${this.actionIcon("mdi:plus-circle-outline")}Add</button>
+          <button class="action" data-ignore="${this.escape(item.source_entity_id)}">${this.actionIcon("mdi:eye-off-outline")}Ignore</button>
         </div>
       `;
     }
     if (ignored) {
       return `
         <div class="actions">
-          <button class="action primary" data-unignore="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:undo"></ha-icon>Unignore</button>
+          <button class="action primary" data-unignore="${this.escape(item.source_entity_id)}">${this.actionIcon("mdi:undo")}Unignore</button>
         </div>
       `;
     }
     return `
       <div class="actions">
-        <button class="action" data-ignore="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:eye-off-outline"></ha-icon>Ignore</button>
-        <button class="action danger" data-remove="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:minus-circle-outline"></ha-icon>Remove</button>
+        <button class="action" data-ignore="${this.escape(item.source_entity_id)}">${this.actionIcon("mdi:eye-off-outline")}Ignore</button>
+        <button class="action danger" data-remove="${this.escape(item.source_entity_id)}">${this.actionIcon("mdi:minus-circle-outline")}Remove</button>
       </div>
     `;
   }
@@ -873,7 +895,7 @@ class OrchardPanel extends HTMLElement {
           <label>Siri Name<input data-field="siri_name" value="${this.escape(item.siri_name || item.name)}"></label>
         </div>
         <div class="actions">
-          <button class="action primary" data-save="${this.escape(item.source_entity_id)}"><ha-icon icon="mdi:content-save-outline"></ha-icon>Save</button>
+          <button class="action primary" data-save="${this.escape(item.source_entity_id)}">${this.actionIcon("mdi:content-save-outline")}Save</button>
         </div>
       </section>
     `;
@@ -985,6 +1007,14 @@ class OrchardPanel extends HTMLElement {
         this.post(`orchard/accessory/${save.dataset.save}`, body);
       });
     }
+  }
+
+  actionIcon(icon) {
+    return `<span class="action-icon"><ha-icon icon="${this.escape(icon)}"></ha-icon></span>`;
+  }
+
+  itemIcon(icon) {
+    return `<span class="item-icon"><ha-icon icon="${this.escape(icon)}"></ha-icon></span>`;
   }
 
   escape(value) {
