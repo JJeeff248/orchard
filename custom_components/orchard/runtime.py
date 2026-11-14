@@ -151,7 +151,6 @@ class OrchardRuntime:
         self._seed_known_entities()
 
         seen: set[str] = set()
-        known_entities = set(self.storage.data.known_entities)
 
         for state in self.hass.states.async_all():
             if state.domain not in SUPPORTED_DOMAINS:
@@ -170,7 +169,7 @@ class OrchardRuntime:
             elif (
                 self.entry.data.get("auto_discover", True)
                 and self.storage.data.bootstrapped
-                and state.entity_id not in known_entities
+                and state.entity_id not in self.storage.data.changes
                 and self.builder.is_review_candidate(state.entity_id, state)
             ):
                 await self.async_review_entity(state.entity_id)

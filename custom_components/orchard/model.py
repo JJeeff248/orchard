@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from homeassistant.components.fan import FanEntityFeature
 from homeassistant.components.light import (
     ATTR_EFFECT_LIST,
     ATTR_SUPPORTED_COLOR_MODES,
@@ -24,8 +25,22 @@ from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_registry import EntityCategory
 
-SUPPORTED_DOMAINS = {"light", "scene", "switch", "sensor", "binary_sensor", "cover", "climate", "lock", "media_player", "vacuum"}
-DISCOVERY_DOMAINS = frozenset({"light", "scene", "switch", "cover", "climate", "lock", "media_player", "vacuum"})
+SUPPORTED_DOMAINS = {
+    "light",
+    "scene",
+    "switch",
+    "fan",
+    "sensor",
+    "binary_sensor",
+    "cover",
+    "climate",
+    "lock",
+    "media_player",
+    "vacuum",
+}
+DISCOVERY_DOMAINS = frozenset(
+    {"light", "scene", "switch", "fan", "cover", "climate", "lock", "media_player", "vacuum"}
+)
 
 
 @dataclass(slots=True)
@@ -102,6 +117,8 @@ class AppleModelBuilder:
             accessory = self._build_scene(state)
         elif domain == "switch":
             accessory = self._build_switch(state)
+        elif domain == "fan":
+            accessory = self._build_fan(state)
         elif domain == "sensor":
             accessory = self._build_sensor(state)
         elif domain == "binary_sensor":
@@ -260,6 +277,50 @@ class AppleModelBuilder:
                 "reason": "Home Assistant switches map to simple on/off accessories.",
                 "supports": controls,
                 "recommendation": "Apple Switch",
+            },
+            diagnostics=self._diagnostics(state),
+        )
+
+    def _build_fan(self, state: State) -> AppleAccessory:
+        features = int(state.attributes.get(ATTR_SUPPORTED_FEATURES) or 0)
+        controls = ["Power"]
+        capabilities: dict[str, Any] = {
+            "on_off": True,
+            "speed": False,
+            "oscillation": False,
+            "direction": False,
+            "preset": False,
+        }
+
+        if features & FanEntityFeature.SET_SPEED:
+            controls.append("Speed")
+            capabilities["speed"] = True
+        if features & FanEntityFeature.OSCILLATE:
+            controls.append("Oscillation")
+            capabilities["oscillation"] = True
+        if features & FanEntityFeature.DIRECTION:
+            controls.append("Direction")
+            capabilities["direction"] = True
+        if features & FanEntityFeature.PRESET_MODE:
+            controls.append("Preset")
+            capabilities["preset"] = True
+
+        return AppleAccessory(
+            id=state.entity_id,
+            source_entity_id=state.entity_id,
+            name=self._display_name(state),
+            room=self._area_name(state.entity_id),
+            category="Fan",
+            icon="mdi:fan",
+            controls=controls,
+            capabilities=capabilities,
+            state=state.state,
+            needs_attention=state.state in {STATE_UNAVAILABLE, STATE_UNKNOWN},
+            explanation={
+                "mapped_as": "Apple Fan",
+                "reason": "Fans map to Apple Home fan controls for power, speed, and swing.",
+                "supports": controls,
+                "recommendation": "Apple Fan",
             },
             diagnostics=self._diagnostics(state),
         )

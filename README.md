@@ -11,7 +11,7 @@ It discovers compatible entities, explains each mapping, keeps a versioned `.sto
 This is an early runtime implementation for the PRD in `PRD.md`. It includes:
 
 - Config flow setup
-- Event-driven discovery for lights and scenes
+- Event-driven discovery for lights, fans, scenes, and other HomeKit-style accessories
 - Scheduled reconciliation
 - Versioned Home Assistant storage
 - Accessory review, ignore, and configuration
